@@ -1,0 +1,94 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../../../auth/[...nextauth]/route";
+import connectDB from "@/lib/mongodb";
+import Submission from "@/models/Submission";
+import Agency from "@/models/Agency";
+import { generateApplicationHTML } from "@/lib/services/pdf/ApplicationPDF";
+import puppeteer from "puppeteer";
+
+/**
+ * GET /api/agency/applications/[id]/pdf
+ * Generate and download application PDF
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = session.user as any;
+    const applicationId = params.id;
+
+    await connectDB();
+
+    // Get application
+    const submission = await Submission.findOne({
+      _id: applicationId,
+      agencyId: user.agencyId,
+    });
+
+    if (!submission) {
+      return NextResponse.json(
+        { error: "Application not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get agency details
+    const agency = await Agency.findById(user.agencyId);
+
+    // Prepare application data
+    const formData = submission.payload;
+    const applicationData = {
+      ...formData,
+      submittedDate: submission.createdAt.toLocaleDateString(),
+      agencyName: agency?.name || "Unknown Agency",
+      programName: submission.programName || "Advantage Contractor GL",
+    };
+
+    // Generate HTML
+    const htmlContent = generateApplicationHTML(applicationData);
+
+    // Generate PDF using puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 30000,
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px',
+      },
+    });
+    await browser.close();
+
+    // Return PDF as response
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="application-${submission._id.toString()}.pdf"`,
+      },
+    });
+  } catch (error: any) {
+    console.error("PDF generation error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to generate PDF" },
+      { status: 500 }
+    );
+  }
+}
+
+
