@@ -107,35 +107,24 @@ export class PaymentService {
   /**
    * Get Stripe client (if configured)
    * DISABLED FOR BUILD - Always returns null to use mock payments
+   * To enable Stripe: install stripe package and uncomment code below
    */
   private static async getStripeClient() {
     // Stripe disabled for build - always use mock payments
     console.log("⚠️  Stripe disabled - using mock payments");
     return null;
     
-    /* Stripe code - uncomment when stripe package is installed
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    const stripeEnabled = process.env.STRIPE_ENABLED === "true";
-    
-    if (!stripeEnabled || !stripeSecretKey) {
-      console.log("⚠️  Stripe not configured - using mock payments");
-      return null;
-    }
-
-    try {
-      const stripeModule = await import("stripe").catch(() => null);
-      if (!stripeModule) {
-        console.warn("⚠️ Stripe package not installed - using mock payments");
-        return null;
-      }
-      const Stripe = stripeModule.default;
-      return new Stripe(stripeSecretKey, {
-        apiVersion: "2024-11-20.acacia",
-      });
-    } catch (error: any) {
-      console.error("Failed to initialize Stripe:", error?.message || error);
-      return null;
-    }
+    /* 
+    // Stripe integration code - uncomment when stripe package is installed
+    // const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    // const stripeEnabled = process.env.STRIPE_ENABLED === "true";
+    // if (!stripeEnabled || !stripeSecretKey) {
+    //   return null;
+    // }
+    // const stripeModule = await import("stripe").catch(() => null);
+    // if (!stripeModule) return null;
+    // const Stripe = stripeModule.default;
+    // return new Stripe(stripeSecretKey, { apiVersion: "2024-11-20.acacia" });
     */
   }
 
