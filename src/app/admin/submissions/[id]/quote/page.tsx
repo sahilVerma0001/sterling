@@ -152,28 +152,41 @@ export default function AdminQuotePage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setError("");
     try {
       // Fetch submission
       const subRes = await fetch(`/api/admin/submissions/${submissionId}`);
       const subData = await subRes.json();
+      
+      if (!subRes.ok) {
+        setError(subData.error || "Failed to load submission");
+        setLoading(false);
+        return;
+      }
+      
       if (subData.submission) {
         setSubmission(subData.submission);
+      } else {
+        setError("Submission not found");
+        setLoading(false);
+        return;
       }
 
       // Fetch carriers
       const carriersRes = await fetch(`/api/admin/submissions/${submissionId}/carriers`);
       const carriersData = await carriersRes.json();
       console.log("Carriers API response:", carriersData);
-      if (carriersData.carriers) {
+      
+      if (!carriersRes.ok) {
+        console.error("Carriers API error:", carriersData.error);
+        setError(`Failed to load carriers: ${carriersData.error}`);
+      } else if (carriersData.carriers) {
         setCarriers(carriersData.carriers);
         if (carriersData.carriers.length > 0) {
           setSelectedCarrierId(carriersData.carriers[0]._id);
         } else {
           setError("No carriers available. Please ensure carriers are seeded and the submission has been routed.");
         }
-      } else if (carriersData.error) {
-        console.error("Carriers API error:", carriersData.error);
-        setError(`Failed to load carriers: ${carriersData.error}`);
       }
     } catch (err: any) {
       console.error("Error fetching data:", err);
