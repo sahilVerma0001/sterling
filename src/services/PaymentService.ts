@@ -29,8 +29,7 @@ export class PaymentService {
     const Payment = (await import("@/models/Payment")).default;
     
     const paymentMethod = params.paymentMethod || "MOCK";
-    // Disable Stripe for build - will use mock payments only
-    const useStripe = false; // Set to true only if stripe package is installed
+    // Stripe disabled for build - using mock payments only
 
     try {
       // Create payment record
@@ -45,18 +44,16 @@ export class PaymentService {
         paidBy: params.userId,
       });
 
-      // If Stripe is enabled, create payment intent
+      // Stripe integration disabled - using mock payments only
+      // To enable Stripe: install stripe package and uncomment the code below
+      /*
+      const useStripe = process.env.STRIPE_ENABLED === "true";
       if (useStripe) {
         try {
           const stripe = await this.getStripeClient();
-          if (!stripe) {
-            // Fallback to mock if Stripe not available
-            console.log("⚠️ Stripe not available, falling back to mock payment");
-            throw new Error("Stripe not available");
-          }
           if (stripe) {
             const paymentIntent = await stripe.paymentIntents.create({
-              amount: Math.round(params.amountUSD * 100), // Convert to cents
+              amount: Math.round(params.amountUSD * 100),
               currency: "usd",
               metadata: {
                 quoteId: params.quoteId,
@@ -64,15 +61,10 @@ export class PaymentService {
                 paymentType: params.paymentType,
               },
             });
-
-            // Update payment with Stripe details
             payment.stripePaymentIntentId = paymentIntent.id;
             payment.stripeClientSecret = paymentIntent.client_secret || undefined;
             payment.status = "PROCESSING";
             await payment.save();
-
-            console.log(`✅ Stripe payment intent created: ${paymentIntent.id}`);
-
             return {
               success: true,
               paymentId: payment._id.toString(),
@@ -82,9 +74,9 @@ export class PaymentService {
           }
         } catch (stripeError: any) {
           console.error("Stripe error, falling back to mock:", stripeError.message);
-          // Continue with mock payment
         }
       }
+      */
 
       // Mock payment - simulate instant success
       payment.status = "COMPLETED";
