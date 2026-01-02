@@ -921,7 +921,7 @@ export default function QuoteDetailsPage() {
             <div className="space-y-2">
               {quote.binderPdfUrl && (
               <a
-                href={quote.binderPdfUrl}
+                href={`/api/documents/download?path=${encodeURIComponent(quote.binderPdfUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00BCD4] text-white rounded-lg text-sm font-semibold hover:bg-[#00ACC1] transition-colors"
@@ -1154,7 +1154,7 @@ export default function QuoteDetailsPage() {
                     <div className="space-y-2">
                       {submission.finalPolicyDocuments.finalBinderPdfUrl && (
                         <a
-                          href={submission.finalPolicyDocuments.finalBinderPdfUrl}
+                          href={`/api/documents/download?path=${encodeURIComponent(submission.finalPolicyDocuments.finalBinderPdfUrl)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block px-4 py-2 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium text-blue-700"
@@ -1164,7 +1164,7 @@ export default function QuoteDetailsPage() {
                       )}
                       {submission.finalPolicyDocuments.finalPolicyPdfUrl && (
                         <a
-                          href={submission.finalPolicyDocuments.finalPolicyPdfUrl}
+                          href={`/api/documents/download?path=${encodeURIComponent(submission.finalPolicyDocuments.finalPolicyPdfUrl)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block px-4 py-2 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium text-blue-700"
@@ -1174,7 +1174,7 @@ export default function QuoteDetailsPage() {
                       )}
                       {submission.finalPolicyDocuments.certificateOfInsuranceUrl && (
                         <a
-                          href={submission.finalPolicyDocuments.certificateOfInsuranceUrl}
+                          href={`/api/documents/download?path=${encodeURIComponent(submission.finalPolicyDocuments.certificateOfInsuranceUrl)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block px-4 py-2 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium text-blue-700"

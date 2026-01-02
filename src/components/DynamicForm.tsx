@@ -177,7 +177,7 @@ export default function DynamicForm({
                     placeholder={field.placeholder}
                     className={`w-full px-4 py-3.5 bg-white border-2 ${
                       error ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-100"
-                    } rounded-xl text-gray-900 font-medium focus:outline-none focus:ring-4 transition-all hover:border-gray-300 placeholder:text-gray-400`}
+                    } rounded-xl text-gray-900 font-semibold focus:outline-none focus:ring-4 transition-all hover:border-gray-300 placeholder:text-gray-400 !text-gray-900`}
                   />
                   <div className={`absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none`}></div>
                 </div>
@@ -192,7 +192,7 @@ export default function DynamicForm({
                     placeholder={field.placeholder}
                     className={`w-full px-4 py-3.5 bg-white border-2 ${
                       error ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-100"
-                    } rounded-xl text-gray-900 font-medium focus:outline-none focus:ring-4 transition-all hover:border-gray-300 placeholder:text-gray-400`}
+                    } rounded-xl text-gray-900 font-semibold focus:outline-none focus:ring-4 transition-all hover:border-gray-300 placeholder:text-gray-400 !text-gray-900`}
                   />
                 </div>
               )}
@@ -206,7 +206,7 @@ export default function DynamicForm({
                     rows={4}
                     className={`w-full px-4 py-3.5 bg-white border-2 ${
                       error ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-100"
-                    } rounded-xl text-gray-900 font-medium focus:outline-none focus:ring-4 transition-all hover:border-gray-300 resize-none placeholder:text-gray-400`}
+                    } rounded-xl text-gray-900 font-semibold focus:outline-none focus:ring-4 transition-all hover:border-gray-300 resize-none placeholder:text-gray-400 !text-gray-900`}
                   />
                 </div>
               )}
@@ -216,9 +216,9 @@ export default function DynamicForm({
                 <div className="relative">
                   <select
                     {...register(field.key)}
-                    className={`w-full px-4 py-3.5 bg-white border-2 ${
+                    className={`w-full px-4 py-3.5 bg-white border-2 !text-gray-900 ${
                       error ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-100"
-                    } rounded-xl text-gray-900 font-medium focus:outline-none focus:ring-4 transition-all hover:border-gray-300 appearance-none cursor-pointer`}
+                    } rounded-xl text-gray-900 font-semibold focus:outline-none focus:ring-4 transition-all hover:border-gray-300 appearance-none cursor-pointer !text-gray-900`}
                   >
                     <option value="">Select {field.label}...</option>
                     {field.options.map((option) => (

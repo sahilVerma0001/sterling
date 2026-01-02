@@ -380,7 +380,7 @@ export default function UploadFinalDocumentsPage() {
                     </div>
                   </div>
                   <a
-                    href={submission.finalPolicyDocuments.finalBinderPdfUrl}
+                    href={`/api/documents/download?path=${encodeURIComponent(submission.finalPolicyDocuments.finalBinderPdfUrl)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
@@ -408,7 +408,7 @@ export default function UploadFinalDocumentsPage() {
                     </div>
                   </div>
                   <a
-                    href={submission.finalPolicyDocuments.finalPolicyPdfUrl}
+                    href={`/api/documents/download?path=${encodeURIComponent(submission.finalPolicyDocuments.finalPolicyPdfUrl)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition-colors"
@@ -436,7 +436,7 @@ export default function UploadFinalDocumentsPage() {
                     </div>
                   </div>
                   <a
-                    href={submission.finalPolicyDocuments.certificateOfInsuranceUrl}
+                    href={`/api/documents/download?path=${encodeURIComponent(submission.finalPolicyDocuments.certificateOfInsuranceUrl)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition-colors"

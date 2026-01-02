@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
+import { toast } from "sonner";
 
 interface Carrier {
   _id: string;
@@ -42,7 +44,6 @@ export default function AdminQuotePage() {
   const [premiumTaxPercent, setPremiumTaxPercent] = useState("");
   const [premiumTaxAmountUSD, setPremiumTaxAmountUSD] = useState("");
   const [policyFeeUSD, setPolicyFeeUSD] = useState("");
-  // Broker fee comes from application form, not admin input
   
   // Policy details (will be auto-populated from application form)
   const [generalLiabilityLimit, setGeneralLiabilityLimit] = useState("");
@@ -108,28 +109,22 @@ export default function AdminQuotePage() {
       setBrokerFeeFromForm(brokerFee);
       
       // Get limits from form
-      // Coverage limits come as "1M / 1M / 1M" format - parse to extract general liability and aggregate
       if (formData.coverageLimits) {
         const limitsStr = formData.coverageLimits;
-        // Format: "1M / 1M / 1M" = "Per Occurrence / General Aggregate / Products Aggregate"
-        // For now, set both to the same value or parse if needed
         setGeneralLiabilityLimit(limitsStr);
         setAggregateLimit(limitsStr);
       }
       
       // Fire Legal Limit and Medical Expense Limit may have dollar signs
       if (formData.fireLegalLimit) {
-        // Remove dollar signs and commas for storage
         const cleanValue = formData.fireLegalLimit.replace(/[$,]/g, '');
         setFireLegalLimit(cleanValue);
       }
       if (formData.medicalExpenseLimit) {
-        // Remove dollar signs and commas for storage
         const cleanValue = formData.medicalExpenseLimit.replace(/[$,]/g, '');
         setMedicalExpenseLimit(cleanValue);
       }
       if (formData.deductible) {
-        // Remove dollar signs and commas for storage
         const cleanValue = formData.deductible.replace(/[$,]/g, '');
         setDeductible(cleanValue);
       }
@@ -296,6 +291,7 @@ export default function AdminQuotePage() {
       }
 
       setSuccess(true);
+      toast.success("Quote created successfully! Redirecting...");
       // Redirect to submission details page
       setTimeout(() => {
         router.push(`/admin/submissions/${submissionId}`);
@@ -303,15 +299,20 @@ export default function AdminQuotePage() {
     } catch (err: any) {
       console.error("Quote creation error:", err);
       setError(err.message || "Failed to create quote");
+      toast.error(err.message || "Failed to create quote");
       setSubmitting(false);
     }
   };
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-50">
         <div className="text-center">
-          <div className="animate-pulse text-[#6B6B6B]">Loading...</div>
+          <div className="relative w-12 h-12 mx-auto mb-4">
+            <div className="absolute inset-0 border-4 border-rose-100 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-transparent border-t-rose-600 rounded-full animate-spin"></div>
+          </div>
+          <p className="text-sm text-gray-600 font-medium">Loading quote form...</p>
         </div>
       </div>
     );
@@ -323,19 +324,38 @@ export default function AdminQuotePage() {
 
   if (!submission) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5]">
-        <header className="bg-white border-b border-[#E0E0E0]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <Link href="/admin/dashboard" className="text-xl font-bold text-[#4A4A4A]">
-              Sterling Portal - Admin
-            </Link>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <Link href="/admin/dashboard" className="flex items-center gap-4 group">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-500 via-pink-500 to-orange-500 rounded-2xl blur-md opacity-50 group-hover:opacity-75 animate-pulse transition-all duration-500"></div>
+                  <div className="relative w-12 h-12 bg-gradient-to-br from-rose-600 via-rose-700 to-pink-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-rose-600/40 group-hover:shadow-rose-600/60 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
+                    <div className="absolute inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-xl"></div>
+                    <div className="relative">
+                      <span className="text-white font-black text-lg tracking-tighter drop-shadow-lg">SP</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-900 font-bold text-lg tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text">Sterling Portal</span>
+                    <div className="px-2 py-0.5 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-md">
+                      <span className="text-[10px] font-black text-rose-600 tracking-wider">ADMIN</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 font-semibold -mt-0.5 tracking-wide">Control Center</p>
+                </div>
+              </Link>
+            </div>
           </div>
         </header>
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="card-sterling p-8">
-            <h1 className="text-2xl font-bold text-[#4A4A4A] mb-4">Error</h1>
-            <p className="text-red-600 mb-4">{error || "Submission not found"}</p>
-            <Link href="/admin/dashboard" className="btn-sterling-secondary">
+        <main className="max-w-4xl mx-auto px-6 lg:px-8 py-12">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/60 p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Error</h1>
+            <p className="text-red-600 mb-6">{error || "Submission not found"}</p>
+            <Link href="/admin/dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
               ← Back to Dashboard
             </Link>
           </div>
@@ -346,15 +366,19 @@ export default function AdminQuotePage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
-        <div className="card-sterling p-8 max-w-md text-center">
-          <div className="text-4xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-[#4A4A4A] mb-2">Quote Created & Sent!</h2>
-          <p className="text-[#6B6B6B] mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/60 p-12 max-w-md text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Quote Created & Sent!</h2>
+          <p className="text-gray-600 mb-6">
             Quote has been created, binder PDF generated, and notification sent to the broker.
             <br />
             <br />
-            Redirecting to submission details...
+            <span className="text-sm text-gray-500">Redirecting to submission details...</span>
           </p>
         </div>
       </div>
@@ -362,67 +386,135 @@ export default function AdminQuotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {/* Header */}
-      <header className="bg-white border-b border-[#E0E0E0]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/admin/dashboard" className="text-xl font-bold text-[#4A4A4A]">
-              Sterling Portal - Admin
-            </Link>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-[#6B6B6B]">
-                {session?.user?.name || session?.user?.email}
-              </span>
-              <Link
-                href="/api/auth/signout"
-                className="text-sm text-[#6B6B6B] hover:text-[#4A4A4A]"
-              >
-                Sign Out
+      <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-10">
+              <Link href="/admin/dashboard" className="flex items-center gap-4 group">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-500 via-pink-500 to-orange-500 rounded-2xl blur-md opacity-50 group-hover:opacity-75 animate-pulse transition-all duration-500"></div>
+                  <div className="relative w-12 h-12 bg-gradient-to-br from-rose-600 via-rose-700 to-pink-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-rose-600/40 group-hover:shadow-rose-600/60 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
+                    <div className="absolute inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-xl"></div>
+                    <div className="relative">
+                      <span className="text-white font-black text-lg tracking-tighter drop-shadow-lg">SP</span>
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-300 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full opacity-0 group-hover:opacity-100"></div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-900 font-bold text-lg tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text">Sterling Portal</span>
+                    <div className="px-2 py-0.5 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-md">
+                      <span className="text-[10px] font-black text-rose-600 tracking-wider">ADMIN</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 font-semibold -mt-0.5 tracking-wide">Control Center</p>
+                </div>
               </Link>
+              <nav className="hidden lg:flex items-center gap-1">
+                <Link href="/admin/dashboard" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
+                  Dashboard
+                </Link>
+                <Link href="/admin/submissions" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
+                  Submissions
+                </Link>
+                <Link href="/admin/quotes" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
+                  Quotes
+                </Link>
+                <Link href="/admin/bind-requests" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
+                  Bind Requests
+                </Link>
+                <Link href="/admin/bound-policies" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition">
+                  Policies
+                </Link>
+              </nav>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex flex-col items-end">
+                <p className="text-sm font-semibold text-gray-900">{(session?.user as any)?.name || "Admin"}</p>
+                <p className="text-xs text-gray-500 font-medium">{(session?.user as any)?.email}</p>
+              </div>
+              <button
+                onClick={() => signOut()}
+                className="group relative px-4 py-2 text-sm font-semibold text-gray-700 hover:text-white bg-gradient-to-r from-gray-100 to-gray-200 hover:from-rose-600 hover:to-pink-600 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
+                </span>
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-5xl mx-auto px-6 lg:px-8 py-8">
         <div className="mb-6">
           <Link
             href={`/admin/submissions/${submissionId}`}
-            className="text-sm text-[#6B6B6B] hover:text-[#4A4A4A] inline-flex items-center gap-1"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors group"
           >
-            ← Back to Submission
+            <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Submission
           </Link>
         </div>
 
-        <div className="card-sterling p-8">
-          <h1 className="text-3xl font-bold text-[#4A4A4A] mb-2">Enter Quote</h1>
-          <p className="text-[#6B6B6B] mb-8">
-            Create a quote for: {submission.clientContact.name}
-            {submission.programName ? (
-              <> ({submission.programName})</>
-            ) : submission.templateId ? (
-              <> ({submission.templateId.industry} - {submission.templateId.subtype})</>
-            ) : (
-              <> (Application)</>
-            )}
-          </p>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/60 p-8">
+          {/* Header Section */}
+          <div className="mb-8 pb-6 border-b border-gray-200/60">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-rose-100 to-pink-100 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Enter Quote</h1>
+                <p className="text-gray-600 mt-1">
+                  Create a quote for: <span className="font-semibold text-gray-900">{submission.clientContact.name}</span>
+                  {submission.programName ? (
+                    <> ({submission.programName})</>
+                  ) : submission.templateId ? (
+                    <> ({submission.templateId.industry} - {submission.templateId.subtype})</>
+                  ) : (
+                    <> (Application)</>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Carrier Selection */}
-            <div>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200/60">
               <label
                 htmlFor="carrier"
-                className="block text-sm font-semibold text-[#4A4A4A] mb-2"
+                className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2"
               >
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
                 Carrier <span className="text-red-500">*</span>
               </label>
               <select
                 id="carrier"
                 value={selectedCarrierId}
                 onChange={(e) => setSelectedCarrierId(e.target.value)}
-                className="input-sterling focus-sterling w-full"
+                className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all hover:border-blue-300 !text-gray-900"
                 required
               >
                 <option value="">-- Select Carrier --</option>
@@ -433,22 +525,28 @@ export default function AdminQuotePage() {
                 ))}
               </select>
               {carriers.length === 0 && (
-                <p className="text-sm text-red-600 mt-1">
+                <p className="text-sm text-red-600 mt-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   No carriers found. This submission may not have been routed yet.
                 </p>
               )}
             </div>
 
             {/* Carrier Quote Amount */}
-            <div>
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200/60">
               <label
                 htmlFor="carrierQuote"
-                className="block text-sm font-semibold text-[#4A4A4A] mb-2"
+                className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2"
               >
+                <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 Carrier Quote Amount (USD) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold text-lg">
                   $
                 </span>
                 <input
@@ -459,20 +557,27 @@ export default function AdminQuotePage() {
                   value={carrierQuoteUSD}
                   onChange={(e) => setCarrierQuoteUSD(e.target.value)}
                   required
-                  className="input-sterling focus-sterling w-full pl-8"
+                  className="w-full pl-10 pr-4 py-3 bg-white border-2 border-emerald-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all hover:border-emerald-300 !text-gray-900"
                   placeholder="0.00"
                 />
               </div>
             </div>
 
             {/* Premium Breakdown Section */}
-            <div className="border-t border-[#E0E0E0] pt-6">
-              <h3 className="text-lg font-bold text-[#4A4A4A] mb-4">Premium Breakdown</h3>
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200/60">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                Premium Breakdown
+              </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Premium Tax */}
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Premium Tax (%)
                   </label>
                   <div className="flex gap-2">
@@ -483,26 +588,26 @@ export default function AdminQuotePage() {
                       max="100"
                       value={premiumTaxPercent}
                       onChange={(e) => setPremiumTaxPercent(e.target.value)}
-                      className="input-sterling focus-sterling flex-1"
+                      className="flex-1 px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all hover:border-gray-300 !text-gray-900"
                       placeholder="0.00"
                     />
-                    <span className="text-[#6B6B6B] self-center">%</span>
+                    <span className="text-gray-600 font-semibold self-center px-3">%</span>
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Premium Tax Amount (USD)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">$</span>
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       value={premiumTaxAmountUSD}
                       readOnly
-                      className="input-sterling w-full pl-8 bg-gray-50"
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 font-semibold !text-gray-900"
                       placeholder="Auto-calculated"
                     />
                   </div>
@@ -510,18 +615,18 @@ export default function AdminQuotePage() {
 
                 {/* Policy Fee */}
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Policy Fee (USD)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">$</span>
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       value={policyFeeUSD}
                       onChange={(e) => setPolicyFeeUSD(e.target.value)}
-                      className="input-sterling focus-sterling w-full pl-8"
+                      className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all hover:border-gray-300 !text-gray-900"
                       placeholder="0.00"
                     />
                   </div>
@@ -530,16 +635,16 @@ export default function AdminQuotePage() {
                 {/* Broker Fee - Display only (from application form) */}
                 {brokerFeeFromForm > 0 && (
                   <div>
-                    <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
-                      Broker Fee (USD) <span className="text-xs text-[#6B6B6B]">(from application)</span>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Broker Fee (USD) <span className="text-xs text-gray-500 font-normal">(from application)</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">$</span>
+                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                       <input
                         type="text"
                         value={brokerFeeFromForm.toFixed(2)}
                         readOnly
-                        className="input-sterling w-full pl-8 bg-gray-50"
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 font-semibold !text-gray-900"
                       />
                     </div>
                   </div>
@@ -548,84 +653,94 @@ export default function AdminQuotePage() {
             </div>
 
             {/* Policy Limits Section */}
-            <div className="border-t border-[#E0E0E0] pt-6">
-              <h3 className="text-lg font-bold text-[#4A4A4A] mb-4">Policy Limits</h3>
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200/60">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                Policy Limits
+              </h3>
               
-              <div className="mb-2">
-                <p className="text-xs text-[#6B6B6B] italic">
-                  * Policy limits and endorsements are pre-filled from the application form. You can edit if needed.
+              <div className="mb-4 p-3 bg-amber-100/50 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800 font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Policy limits and endorsements are pre-filled from the application form. You can edit if needed.
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
-                    General Liability Limit <span className="text-xs text-[#6B6B6B]">(from application)</span>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    General Liability Limit <span className="text-xs text-gray-500 font-normal">(from application)</span>
                   </label>
                   <input
                     type="text"
                     value={generalLiabilityLimit}
                     onChange={(e) => setGeneralLiabilityLimit(e.target.value)}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all hover:border-gray-300 !text-gray-900"
                     placeholder="e.g., 1M / 1M / 1M"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
-                    Aggregate Limit <span className="text-xs text-[#6B6B6B]">(from application)</span>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Aggregate Limit <span className="text-xs text-gray-500 font-normal">(from application)</span>
                   </label>
                   <input
                     type="text"
                     value={aggregateLimit}
                     onChange={(e) => setAggregateLimit(e.target.value)}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all hover:border-gray-300 !text-gray-900"
                     placeholder="e.g., 2M"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
-                    Fire Legal Limit <span className="text-xs text-[#6B6B6B]">(from application)</span>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Fire Legal Limit <span className="text-xs text-gray-500 font-normal">(from application)</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">$</span>
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
                       type="text"
                       value={fireLegalLimit}
                       onChange={(e) => setFireLegalLimit(e.target.value)}
-                      className="input-sterling focus-sterling w-full pl-8"
+                      className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all hover:border-gray-300 !text-gray-900"
                       placeholder="e.g., 100,000"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
-                    Medical Expense Limit <span className="text-xs text-[#6B6B6B]">(from application)</span>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Medical Expense Limit <span className="text-xs text-gray-500 font-normal">(from application)</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">$</span>
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
                       type="text"
                       value={medicalExpenseLimit}
                       onChange={(e) => setMedicalExpenseLimit(e.target.value)}
-                      className="input-sterling focus-sterling w-full pl-8"
+                      className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all hover:border-gray-300 !text-gray-900"
                       placeholder="e.g., 5,000"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Deductible
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B]">$</span>
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
                       type="text"
                       value={deductible}
                       onChange={(e) => setDeductible(e.target.value)}
-                      className="input-sterling focus-sterling w-full pl-8"
+                      className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all hover:border-gray-300 !text-gray-900"
                       placeholder="e.g., 2,500"
                     />
                   </div>
@@ -634,14 +749,21 @@ export default function AdminQuotePage() {
             </div>
 
             {/* Endorsements Section */}
-            <div className="border-t border-[#E0E0E0] pt-6">
-              <h3 className="text-lg font-bold text-[#4A4A4A] mb-2">Included Endorsements</h3>
-              <p className="text-xs text-[#6B6B6B] italic mb-4">
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-200/60">
+              <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                Included Endorsements
+              </h3>
+              <p className="text-xs text-gray-600 mb-4">
                 Pre-filled from application form. You can modify if needed.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {availableEndorsements.map((endorsement) => (
-                  <label key={endorsement} className="flex items-center gap-2 cursor-pointer">
+                  <label key={endorsement} className="flex items-center gap-3 cursor-pointer p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all">
                     <input
                       type="checkbox"
                       checked={selectedEndorsements.includes(endorsement)}
@@ -652,78 +774,85 @@ export default function AdminQuotePage() {
                           setSelectedEndorsements(selectedEndorsements.filter((e) => e !== endorsement));
                         }
                       }}
-                      className="w-4 h-4 text-[#00BCD4] border-gray-300 rounded focus:ring-[#00BCD4]"
+                      className="w-5 h-5 text-indigo-600 border-2 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2 transition"
                     />
-                    <span className="text-sm text-[#4A4A4A]">{endorsement}</span>
+                    <span className="text-sm text-gray-900 font-medium">{endorsement}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             {/* Policy Details Section */}
-            <div className="border-t border-[#E0E0E0] pt-6">
-              <h3 className="text-lg font-bold text-[#4A4A4A] mb-4">Policy Details</h3>
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-200/60">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                Policy Details
+              </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Effective Date
                   </label>
                   <input
                     type="date"
                     value={effectiveDate}
                     onChange={(e) => setEffectiveDate(e.target.value)}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all hover:border-gray-300 !text-gray-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Expiration Date
                   </label>
                   <input
                     type="date"
                     value={expirationDate}
                     onChange={(e) => setExpirationDate(e.target.value)}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all hover:border-gray-300 !text-gray-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Policy Number
                   </label>
                   <input
                     type="text"
                     value={policyNumber}
                     onChange={(e) => setPolicyNumber(e.target.value)}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all hover:border-gray-300 !text-gray-900"
                     placeholder="Carrier policy number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Carrier Reference/Quote #
                   </label>
                   <input
                     type="text"
                     value={carrierReference}
                     onChange={(e) => setCarrierReference(e.target.value)}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all hover:border-gray-300 !text-gray-900"
                     placeholder="Carrier quote reference"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-[#4A4A4A] mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Special Notes / Conditions
                   </label>
                   <textarea
                     value={specialNotes}
                     onChange={(e) => setSpecialNotes(e.target.value)}
                     rows={4}
-                    className="input-sterling focus-sterling w-full"
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all hover:border-gray-300 resize-none !text-gray-900"
                     placeholder="Any special conditions, notes, or requirements..."
                   />
                 </div>
@@ -732,46 +861,51 @@ export default function AdminQuotePage() {
 
             {/* Breakdown Preview */}
             {breakdown && (
-              <div className="p-6 bg-gradient-to-br from-[#F5F5F5] to-[#E9E9E9] rounded-lg border-2 border-[#E0E0E0]">
-                <h3 className="text-lg font-bold text-[#4A4A4A] mb-4">
+              <div className="p-6 bg-gradient-to-br from-rose-50 via-pink-50 to-rose-50 rounded-xl border-2 border-rose-200 shadow-lg">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-pink-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
                   Quote Summary
                 </h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-[#6B6B6B]">Carrier Quote:</span>
-                    <span className="font-semibold text-[#4A4A4A]">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                    <span className="text-gray-700 font-medium">Carrier Quote:</span>
+                    <span className="font-bold text-gray-900 text-lg">
                       ${breakdown.carrierQuote.toFixed(2)}
                     </span>
                   </div>
                   {breakdown.premiumTaxAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-[#6B6B6B]">Premium Tax:</span>
-                      <span className="font-semibold text-[#4A4A4A]">
+                    <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                      <span className="text-gray-700 font-medium">Premium Tax:</span>
+                      <span className="font-bold text-gray-900">
                         ${breakdown.premiumTaxAmount.toFixed(2)}
                       </span>
                     </div>
                   )}
                   {breakdown.policyFeeAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-[#6B6B6B]">Policy Fee:</span>
-                      <span className="font-semibold text-[#4A4A4A]">
+                    <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                      <span className="text-gray-700 font-medium">Policy Fee:</span>
+                      <span className="font-bold text-gray-900">
                         ${breakdown.policyFeeAmount.toFixed(2)}
                       </span>
                     </div>
                   )}
                   {breakdown.brokerFeeAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-[#6B6B6B]">Broker Fee:</span>
-                      <span className="font-semibold text-[#4A4A4A]">
+                    <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
+                      <span className="text-gray-700 font-medium">Broker Fee:</span>
+                      <span className="font-bold text-gray-900">
                         ${breakdown.brokerFeeAmount.toFixed(2)}
                       </span>
                     </div>
                   )}
-                  <div className="pt-3 mt-3 border-t-2 border-[#00BCD4] flex justify-between">
-                    <span className="text-xl font-bold text-[#4A4A4A]">
+                  <div className="pt-4 mt-4 border-t-2 border-rose-300 flex justify-between items-center p-4 bg-gradient-to-r from-rose-100 to-pink-100 rounded-lg">
+                    <span className="text-xl font-bold text-gray-900">
                       Total Cost:
                     </span>
-                    <span className="text-xl font-bold text-[#00BCD4]">
+                    <span className="text-2xl font-black text-rose-600">
                       ${breakdown.finalAmount.toFixed(2)}
                     </span>
                   </div>
@@ -781,23 +915,40 @@ export default function AdminQuotePage() {
 
             {/* Error Message */}
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                <p className="text-red-600 text-sm font-semibold flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
+                </p>
               </div>
             )}
 
             {/* Submit Button */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 pt-4">
               <button
                 type="submit"
                 disabled={submitting || carriers.length === 0}
-                className="btn-sterling disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
-                {submitting ? "Creating Quote..." : "Create Quote"}
+                {submitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Creating Quote...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Create Quote
+                  </>
+                )}
               </button>
               <Link
                 href={`/admin/submissions/${submissionId}`}
-                className="btn-sterling-secondary"
+                className="px-6 py-4 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all"
               >
                 Cancel
               </Link>
@@ -808,4 +959,3 @@ export default function AdminQuotePage() {
     </div>
   );
 }
-

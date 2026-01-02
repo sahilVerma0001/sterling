@@ -476,7 +476,7 @@ function SubmitFormContent() {
                 </svg>
                 Client Name <span className="text-red-500">*</span>
               </label>
-              <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="John Doe" />
+              <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="John Doe" />
             </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
@@ -485,7 +485,7 @@ function SubmitFormContent() {
                 </svg>
                 Phone <span className="text-red-500">*</span>
               </label>
-              <input type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="(555) 123-4567" />
+              <input type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="(555) 123-4567" />
             </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
@@ -494,7 +494,7 @@ function SubmitFormContent() {
                 </svg>
                 Email <span className="text-red-500">*</span>
               </label>
-              <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="client@example.com" />
+              <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="client@example.com" />
             </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
@@ -503,7 +503,7 @@ function SubmitFormContent() {
                 </svg>
                 EIN <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
-              <input type="text" value={clientEIN} onChange={(e) => setClientEIN(e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="12-3456789" />
+              <input type="text" value={clientEIN} onChange={(e) => setClientEIN(e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="12-3456789" />
             </div>
           </div>
 
@@ -519,11 +519,11 @@ function SubmitFormContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <label className="text-sm font-bold text-gray-900 mb-2 block">Street Address <span className="text-red-500">*</span></label>
-                <input type="text" value={clientStreet} onChange={(e) => setClientStreet(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="123 Main Street" />
+                <input type="text" value={clientStreet} onChange={(e) => setClientStreet(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="123 Main Street" />
               </div>
               <div>
                 <label className="text-sm font-bold text-gray-900 mb-2 block">City <span className="text-red-500">*</span></label>
-                <input type="text" value={clientCity} onChange={(e) => setClientCity(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="Los Angeles" />
+                <input type="text" value={clientCity} onChange={(e) => setClientCity(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="Los Angeles" />
               </div>
               <div>
                 <label className="text-sm font-bold text-gray-900 mb-2 block">State <span className="text-red-500">*</span></label>
@@ -540,7 +540,7 @@ function SubmitFormContent() {
               </div>
               <div>
                 <label className="text-sm font-bold text-gray-900 mb-2 block">Zip Code <span className="text-red-500">*</span></label>
-                <input type="text" value={clientZip} onChange={(e) => setClientZip(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300" placeholder="90001" />
+                <input type="text" value={clientZip} onChange={(e) => setClientZip(e.target.value)} required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all hover:border-gray-300 !text-gray-900" placeholder="90001" />
               </div>
             </div>
           </div>
