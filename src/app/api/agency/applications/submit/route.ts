@@ -88,10 +88,6 @@ export async function POST(req: NextRequest) {
     try {
       console.log("📄 Starting PDF generation...");
       
-      if (!puppeteer) {
-        throw new Error("Puppeteer is not installed or not available");
-      }
-      
       const applicationData = {
         ...formData,
         submittedDate: new Date().toLocaleDateString(),

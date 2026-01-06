@@ -11,15 +11,11 @@ export async function getPuppeteerBrowser() {
     const puppeteer = await import("puppeteer-core");
     const chromium = await import("@sparticuz/chromium");
     
-    chromium.default.setGraphicsMode(false); // Disable graphics for faster startup
-    
     return await puppeteer.default.launch({
       args: chromium.default.args,
       defaultViewport: chromium.default.defaultViewport,
       executablePath: await chromium.default.executablePath(),
       headless: chromium.default.headless,
-      ignoreHTTPSErrors: true,
-      timeout: 30000,
     });
   } else {
     // Use local Puppeteer for development
