@@ -1,4 +1,4 @@
-export { PDFService } from "./PDFService";
+export { PDFService, generatePDFFromHTML, isPDFServiceConfigured } from "./PDFService";
 export { ProposalPDF } from "./ProposalPDF";
 export { FinanceAgreementPDF } from "./FinanceAgreementPDF";
 export { CarrierFormsPDF } from "./CarrierFormsPDF"; // Old class-based version (for PDFService)

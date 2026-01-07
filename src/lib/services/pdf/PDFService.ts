@@ -3,6 +3,15 @@
  * Uses external service for HTML-to-PDF conversion
  */
 
+import connectDB from "@/lib/mongodb";
+import Quote from "@/models/Quote";
+import Submission from "@/models/Submission";
+import Agency from "@/models/Agency";
+import FinancePlan from "@/models/FinancePlan";
+import { generateProposalHTML } from "./ProposalPDFHTML";
+import { generateCarrierFormsHTML } from "./CarrierFormsPDFHTML";
+import { savePDFToStorage } from "./storage";
+
 interface PDFGenerationOptions {
   html: string;
   format?: 'A4' | 'Letter';
@@ -13,6 +22,18 @@ interface PDFGenerationOptions {
     left?: string;
   };
   printBackground?: boolean;
+}
+
+interface GenerateDocumentOptions {
+  quoteId: string;
+  documentType: 'PROPOSAL' | 'FINANCE_AGREEMENT' | 'CARRIER_FORM';
+}
+
+interface GenerateDocumentResult {
+  success: boolean;
+  documentUrl?: string;
+  documentName?: string;
+  error?: string;
 }
 
 /**
@@ -36,6 +57,7 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
           : `${margin.top || '20px'} ${margin.right || '20px'} ${margin.bottom || '20px'} ${margin.left || '20px'}`
         : '20px';
       
+      // PDFShift uses X-API-Key header for authentication
       const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
         method: 'POST',
         headers: {
@@ -132,3 +154,179 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
 export function isPDFServiceConfigured(): boolean {
   return !!(process.env.BROWSERLESS_API_KEY || process.env.PDFSHIFT_API_KEY);
 }
+
+/**
+ * PDFService - High-level service for generating documents
+ */
+export const PDFService = {
+  /**
+   * Generate a document (Proposal, Finance Agreement, or Carrier Forms)
+   * Fetches all necessary data and generates the PDF
+   */
+  async generateDocument(options: GenerateDocumentOptions): Promise<GenerateDocumentResult> {
+    const { quoteId, documentType } = options;
+
+    try {
+      await connectDB();
+
+      // Ensure models are registered
+      await import("@/models/Carrier");
+      await import("@/models/Agency");
+
+      // Fetch quote with populated data
+      const quote = await Quote.findById(quoteId)
+        .populate("submissionId")
+        .populate("carrierId", "name email")
+        .lean();
+
+      if (!quote) {
+        return {
+          success: false,
+          error: "Quote not found",
+        };
+      }
+
+      const submission = quote.submissionId as any;
+      if (!submission) {
+        return {
+          success: false,
+          error: "Submission not found",
+        };
+      }
+
+      // Get agency
+      const agency = await Agency.findById(submission.agencyId).lean();
+      if (!agency) {
+        return {
+          success: false,
+          error: "Agency not found",
+        };
+      }
+
+      const formData = submission.payload || {};
+      const carrier = quote.carrierId as any;
+
+      let htmlContent: string;
+      let documentName: string;
+
+      // Generate HTML based on document type
+      switch (documentType) {
+        case "PROPOSAL": {
+          const proposalData = {
+            quoteNumber: quote._id.toString().substring(0, 8).toUpperCase(),
+            proposalDate: new Date().toLocaleDateString(),
+            companyName: formData.companyName || submission.clientContact?.name || "Unknown",
+            dba: formData.dba,
+            firstName: formData.firstName || "",
+            lastName: formData.lastName || "",
+            entityType: formData.entityType || "",
+            companyFEIN: formData.companyFEIN || submission.clientContact?.EIN || "",
+            phone: formData.phone || submission.clientContact?.phone || "",
+            email: formData.email || submission.clientContact?.email || "",
+            streetAddress: formData.streetAddress || submission.clientContact?.businessAddress?.street || "",
+            city: formData.city || submission.clientContact?.businessAddress?.city || "",
+            state: formData.state || submission.clientContact?.businessAddress?.state || "",
+            zipCode: formData.zipCode || submission.clientContact?.businessAddress?.zip || "",
+            agencyName: agency.name,
+            agencyEmail: agency.email,
+            agencyPhone: agency.phone,
+            carrierName: carrier.name,
+            carrierReference: quote.carrierReference,
+            programName: submission.programName || "Advantage Contractor GL",
+            effectiveDate: quote.effectiveDate ? new Date(quote.effectiveDate).toLocaleDateString() : new Date().toLocaleDateString(),
+            expirationDate: quote.expirationDate ? new Date(quote.expirationDate).toLocaleDateString() : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+            carrierQuoteUSD: quote.carrierQuoteUSD,
+            premiumTaxPercent: quote.premiumTaxPercent,
+            premiumTaxAmountUSD: quote.premiumTaxAmountUSD || 0,
+            policyFeeUSD: quote.policyFeeUSD || 0,
+            brokerFeeAmountUSD: quote.brokerFeeAmountUSD || 0,
+            finalAmountUSD: quote.finalAmountUSD,
+            limits: quote.limits,
+            endorsements: quote.endorsements || [],
+            specialNotes: quote.specialNotes,
+          };
+          htmlContent = generateProposalHTML(proposalData);
+          documentName = `proposal-${quote._id.toString()}.pdf`;
+          break;
+        }
+
+        case "FINANCE_AGREEMENT": {
+          const financePlan = await FinancePlan.findOne({ quoteId: quote._id }).lean();
+          if (!financePlan) {
+            return {
+              success: false,
+              error: "Finance plan not found",
+            };
+          }
+
+          // For now, use the React PDF version (FinanceAgreementPDF.tsx)
+          // TODO: Create HTML version for Finance Agreement
+          return {
+            success: false,
+            error: "Finance Agreement HTML generation not yet implemented. Please use the React PDF version.",
+          };
+        }
+
+        case "CARRIER_FORM": {
+          const carrierFormsData = {
+            submissionId: submission._id.toString(),
+            formDate: new Date().toLocaleDateString(),
+            companyName: formData.companyName || submission.clientContact?.name || "Unknown",
+            dba: formData.dba,
+            firstName: formData.firstName || "",
+            lastName: formData.lastName || "",
+            entityType: formData.entityType || "",
+            companyFEIN: formData.companyFEIN || submission.clientContact?.EIN || "",
+            phone: formData.phone || submission.clientContact?.phone || "",
+            email: formData.email || submission.clientContact?.email || "",
+            streetAddress: formData.streetAddress || submission.clientContact?.businessAddress?.street || "",
+            city: formData.city || submission.clientContact?.businessAddress?.city || "",
+            state: formData.state || submission.clientContact?.businessAddress?.state || "",
+            zipCode: formData.zipCode || submission.clientContact?.businessAddress?.zip || "",
+            carrierName: carrier.name,
+            carrierReference: quote.carrierReference,
+            programName: submission.programName || "Advantage Contractor GL",
+            applicationData: formData,
+          };
+          htmlContent = generateCarrierFormsHTML(carrierFormsData);
+          documentName = `carrier-forms-${quote._id.toString()}.pdf`;
+          break;
+        }
+
+        default:
+          return {
+            success: false,
+            error: `Unknown document type: ${documentType}`,
+          };
+      }
+
+      // Generate PDF from HTML
+      const pdfBuffer = await generatePDFFromHTML({
+        html: htmlContent,
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
+        },
+      });
+
+      // Save PDF to storage
+      const documentUrl = await savePDFToStorage(pdfBuffer, documentName);
+
+      return {
+        success: true,
+        documentUrl,
+        documentName,
+      };
+    } catch (error: any) {
+      console.error("[PDFService] generateDocument error:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to generate document",
+      };
+    }
+  },
+};
