@@ -49,7 +49,7 @@ async function seedAll() {
     const agency1 = await Agency.findOneAndUpdate(
       { email: "agency1@example.com" },
       {
-        name: "California Insurance Agency",
+        name: "Gamaty Insurance Agency LLC DBA Capital & Co Insurance Services",
         email: "agency1@example.com",
         address: {
           street: "123 Main St",
