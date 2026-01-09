@@ -142,22 +142,36 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
       return pdfBuffer;
     } catch (error: any) {
       console.error('[PDF Service] PDFShift failed:', error.message);
+      console.error('[PDF Service] PDFShift error details:', {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+      });
       
       // Check if it's a size limit error
-      const isSizeError = error.message.includes('too big') || error.message.includes('2Mb') || error.message.includes('2MB');
+      const isSizeError = error.message.includes('too big') || 
+                         error.message.includes('2Mb') || 
+                         error.message.includes('2MB') ||
+                         error.message.includes('Document size too big');
       
-      // In production, throw the error (unless it's a size error, then try fallback)
-      if ((process.env.VERCEL || process.env.NODE_ENV === 'production') && !isSizeError) {
-        throw new Error(`PDFShift failed: ${error.message}. Please check your PDFSHIFT_API_KEY.`);
-      }
+      // Log HTML size for debugging
+      const htmlSizeKB = Buffer.byteLength(minifiedHTML, 'utf8') / 1024;
+      console.error(`[PDF Service] HTML size was: ${htmlSizeKB.toFixed(2)} KB`);
       
-      // For size errors or in development, fall through to Puppeteer/Browserless
+      // In production, if it's a size error, provide helpful message
       if (isSizeError) {
-        console.warn('[PDF Service] PDFShift size limit exceeded (likely due to external QR code images), falling back to Puppeteer...');
-        // Continue to fallback handlers below
-      } else {
-        throw error; // Re-throw non-size errors
+        console.error('[PDF Service] PDFShift size limit exceeded. HTML size:', htmlSizeKB.toFixed(2), 'KB');
+        throw new Error(`PDF size too large (${htmlSizeKB.toFixed(2)} KB). The document exceeds PDFShift's 2MB limit. Please optimize the content or upgrade your PDFShift plan.`);
       }
+      
+      // For other errors in production, provide clear error message
+      if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+        throw new Error(`PDFShift failed: ${error.message}. Please check your PDFSHIFT_API_KEY and ensure it's configured in Vercel environment variables.`);
+      }
+      
+      // In development, fall through to Puppeteer/Browserless
+      console.warn('[PDF Service] Falling back to alternative PDF generation method...');
+      throw error; // Will be caught by fallback handlers below
     }
   }
 
@@ -225,10 +239,16 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
     }
   }
 
-  // In production/serverless, we must have PDFShift or Browserless configured
+  // If we reach here, no PDF service is configured or all services failed
+  const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+  
   if (isProduction) {
+    console.error('[PDF Service] All PDF generation methods failed in production');
+    console.error('[PDF Service] PDFShift API Key configured:', !!process.env.PDFSHIFT_API_KEY);
+    console.error('[PDF Service] Browserless API Key configured:', !!process.env.BROWSERLESS_API_KEY);
+    
     throw new Error(
-      'PDF generation failed in production. Please configure PDFSHIFT_API_KEY (or BROWSERLESS_API_KEY) in Vercel environment variables. Puppeteer is not supported in serverless environments.'
+      'PDF generation failed in production. PDFShift encountered an error. Please check: 1) PDFSHIFT_API_KEY is set in Vercel environment variables, 2) The API key is valid, 3) Your PDFShift account has sufficient credits. Alternatively, configure BROWSERLESS_API_KEY as a fallback.'
     );
   }
 
