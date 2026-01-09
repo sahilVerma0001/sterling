@@ -88,50 +88,94 @@ export async function POST(req: NextRequest) {
       console.log("📄 Starting PDF generation...");
       
       // Map form data to packet data format (no quote yet for new submissions)
-      const packetData = mapFormDataToPacketData(
-        formData,
-        submission._id.toString(),
-        agency,
-        undefined, // No quote yet for new submissions
-        submission
-      );
+      let packetData;
+      try {
+        packetData = mapFormDataToPacketData(
+          formData,
+          submission._id.toString(),
+          agency,
+          undefined, // No quote yet for new submissions
+          submission
+        );
+        console.log("✅ Form data mapped successfully");
+      } catch (mapError: any) {
+        console.error("❌ Error mapping form data:", mapError?.message);
+        throw new Error(`Failed to map form data: ${mapError?.message}`);
+      }
 
       console.log("📄 Generating 12-page application packet HTML...");
-      const htmlContent = generateApplicationPacketHTML(packetData);
-      console.log(`📄 HTML content length: ${htmlContent.length} characters`);
+      let htmlContent: string;
+      try {
+        htmlContent = generateApplicationPacketHTML(packetData);
+        console.log(`📄 HTML content length: ${htmlContent.length} characters`);
+      } catch (htmlError: any) {
+        console.error("❌ Error generating HTML:", htmlError?.message);
+        throw new Error(`Failed to generate HTML: ${htmlError?.message}`);
+      }
 
       // Generate PDF using production service (PDFShift)
       console.log("📄 Generating PDF using PDFShift...");
-      const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');
-      pdfBuffer = await generatePDFFromHTML({
-        html: htmlContent,
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '20px',
-          right: '20px',
-          bottom: '20px',
-          left: '20px',
-        },
-      });
-      console.log(`📄 PDF generated - Size: ${pdfBuffer.length} bytes`);
+      try {
+        const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');
+        pdfBuffer = await generatePDFFromHTML({
+          html: htmlContent,
+          format: 'A4',
+          printBackground: true,
+          margin: {
+            top: '20px',
+            right: '20px',
+            bottom: '20px',
+            left: '20px',
+          },
+        });
+        console.log(`📄 PDF generated - Size: ${pdfBuffer.length} bytes`);
+      } catch (pdfGenError: any) {
+        console.error("❌ PDF generation failed:", pdfGenError?.message);
+        // Don't throw - allow submission to continue without PDF
+        throw pdfGenError; // Re-throw to be caught by outer catch
+      }
 
-      // Save PDF to storage
-      const fileName = `application-${submission._id.toString()}.pdf`;
-      console.log(`📄 Saving PDF to storage: ${fileName}`);
-      pdfUrl = await savePDFToStorage(pdfBuffer, fileName);
-      console.log(`📄 PDF saved successfully: ${pdfUrl}`);
+      // Save PDF to storage (skip in serverless environments like Vercel)
+      if (pdfBuffer) {
+        try {
+          // In Vercel/serverless, filesystem is read-only, so skip file storage
+          // PDF can be regenerated on-demand from submission data
+          if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+            console.log("⚠️ Skipping PDF file storage in serverless environment");
+            console.log("📄 PDF can be regenerated on-demand from submission data");
+            // Submission will succeed without PDF URL - PDF can be generated later
+            await submission.save();
+          } else {
+            // Local development - save to filesystem
+            const fileName = `application-${submission._id.toString()}.pdf`;
+            console.log(`📄 Saving PDF to storage: ${fileName}`);
+            pdfUrl = await savePDFToStorage(pdfBuffer, fileName);
+            console.log(`📄 PDF saved successfully: ${pdfUrl}`);
 
-      // Update submission with PDF URL
-      submission.applicationPdfUrl = pdfUrl;
-      await submission.save();
-      console.log("✅ PDF generation and save completed successfully");
+            // Update submission with PDF URL
+            submission.applicationPdfUrl = pdfUrl;
+            await submission.save();
+            console.log("✅ PDF generation and save completed successfully");
+          }
+        } catch (saveError: any) {
+          console.error("❌ PDF save error (non-fatal):", saveError?.message);
+          // Continue - PDF generation succeeded but save failed
+          // In production/serverless, PDF can be regenerated on-demand
+          console.log("⚠️ Submission will continue without PDF URL - can be regenerated later");
+          // Save submission without PDF URL
+          await submission.save().catch((saveErr) => {
+            console.error("❌ Failed to save submission:", saveErr?.message);
+            // This is non-fatal - submission was already created
+          });
+        }
+      }
     } catch (pdfError: any) {
-      console.error("❌ PDF generation error:", pdfError);
+      console.error("❌ PDF generation error (non-fatal):", pdfError);
       console.error("❌ Error message:", pdfError?.message);
       console.error("❌ Error stack:", pdfError?.stack);
-      // Continue even if PDF fails - we can regenerate later
-      // But log it so we know what went wrong
+      // Continue even if PDF fails - submission should still succeed
+      // PDF can be regenerated later from the submission data
+      console.log("⚠️ Continuing submission without PDF - can be regenerated later");
     }
 
     // Send email to carrier with PDF attachment

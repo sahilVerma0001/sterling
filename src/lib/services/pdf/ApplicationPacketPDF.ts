@@ -186,10 +186,15 @@ interface ApplicationPacketData {
 
 /**
  * Generate QR code URL (using a QR code API service)
+ * For PDFShift compatibility, we use smaller size or text-only in production
  */
-function generateQRCodeURL(text: string, size: number = 100): string {
-  // Using a free QR code API - can be replaced with a library if needed
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+function generateQRCodeURL(text: string, size: number = 100, useTextFallback: boolean = false): string {
+  // In production/PDFShift, use text-only to reduce size
+  if (useTextFallback || process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    return ''; // Return empty to use text-only fallback
+  }
+  // Using a free QR code API - smaller size for better compatibility
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${Math.min(size, 60)}x${Math.min(size, 60)}&data=${encodeURIComponent(text)}`;
 }
 
 /**
@@ -205,6 +210,15 @@ function formatYesNo(value: boolean | undefined, defaultValue: boolean = false):
 /**
  * Generate Page 1: Bind Request Checklist
  */
+// Helper function to generate QR code HTML (text-only for production to reduce size)
+function generateQRCodeHTML(text: string, size: number = 80): string {
+  const qrUrl = generateQRCodeURL(text, size, true);
+  if (qrUrl) {
+    return `<div class="qr-code"><img src="${qrUrl}" alt="QR Code" /></div>`;
+  }
+  return `<div class="qr-code-text-only">${text}</div>`;
+}
+
 function generatePage1(data: ApplicationPacketData): string {
   const qrCodeText = `${data.applicationId}`;
   const qrCodePageText = `${data.applicationId}P1`;
@@ -217,9 +231,7 @@ function generatePage1(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title">Bind Request Checklist</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -271,9 +283,7 @@ function generatePage2(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -427,9 +437,7 @@ function generatePage3(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -587,9 +595,7 @@ function generatePage4(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -748,9 +754,7 @@ function generatePage5(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -941,9 +945,7 @@ function generatePage6(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -1004,9 +1006,7 @@ function generatePage7(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -1118,9 +1118,7 @@ function generatePage8(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Acknowledgment</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -1180,9 +1178,7 @@ function generatePage9(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Acknowledgment</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -1250,9 +1246,7 @@ function generatePage10(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Insurance Application</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -1310,9 +1304,7 @@ function generatePage11(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Loss Warranty Letter</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -1399,9 +1391,7 @@ function generatePage12(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical">Invoice Statement</div>
         <div class="qr-container">
-          <div class="qr-code">
-            <img src="${generateQRCodeURL(qrCodeText, 80)}" alt="QR Code" />
-          </div>
+          ${generateQRCodeHTML(qrCodeText, 80)}
           <div class="qr-text">${qrCodeText}</div>
           <div class="qr-page">${qrCodePageText}</div>
           <div class="applicant-icon">👤</div>
@@ -2007,6 +1997,24 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       width: 0.85in;
       height: 0.85in;
       display: block;
+    }
+    
+    .qr-code-text-only {
+      width: 0.85in;
+      height: 0.85in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-white);
+      border: 2px solid var(--primary-color);
+      border-radius: 8px;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      color: var(--primary-color);
+      text-align: center;
+      padding: 0.05in;
+      word-break: break-all;
+      box-shadow: var(--shadow-sm);
     }
     
     .qr-text {
