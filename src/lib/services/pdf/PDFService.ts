@@ -118,19 +118,26 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
         : '20px';
       
       // PDFShift uses X-API-Key header for authentication
+      // For free accounts, we can try sandbox mode which might have different limits
+      const pdfShiftBody: any = {
+        source: minifiedHTML,
+        format: format.toLowerCase(),
+        margin: marginValue,
+        // Use sandbox mode for free accounts (may have different behavior)
+        sandbox: false, // Set to true if experiencing issues with free tier
+        // Note: PDFShift doesn't support print_background parameter
+        // Backgrounds are printed by default in PDFShift
+      };
+      
+      console.log('[PDF Service] Sending to PDFShift with body size:', JSON.stringify(pdfShiftBody).length, 'bytes');
+      
       const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': PDFSHIFT_API_KEY,
         },
-        body: JSON.stringify({
-          source: minifiedHTML,
-          format: format.toLowerCase(),
-          margin: marginValue,
-          // Note: PDFShift doesn't support print_background parameter
-          // Backgrounds are printed by default in PDFShift
-        }),
+        body: JSON.stringify(pdfShiftBody),
       });
 
       if (!response.ok) {
@@ -186,6 +193,18 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
       if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
         // Log the full error for debugging
         console.error('[PDF Service] Full PDFShift error:', JSON.stringify(error, null, 2));
+        
+        // If PDFShift says document is too big even though HTML is small, explain the situation
+        if ((error.message.includes('too big') || error.message.includes('2Mb') || error.message.includes('2MB')) && htmlSizeKB < 1500) {
+          throw new Error(
+            `PDFShift rendered document size limit exceeded. ` +
+            `While the HTML is only ${htmlSizeKB.toFixed(2)} KB, PDFShift counts the rendered document size ` +
+            `(after CSS processing, layout calculation, fonts) which exceeds their free tier 2MB limit. ` +
+            `Solutions: 1) Upgrade your PDFShift plan (recommended), 2) Configure BROWSERLESS_API_KEY as an alternative, ` +
+            `or 3) Contact PDFShift for a free trial with extended limits. Original error: ${error.message}`
+          );
+        }
+        
         throw new Error(`PDFShift failed: ${error.message}. HTML size: ${htmlSizeKB.toFixed(2)} KB. Please check your PDFSHIFT_API_KEY and ensure it's configured correctly in Vercel environment variables.`);
       }
       
