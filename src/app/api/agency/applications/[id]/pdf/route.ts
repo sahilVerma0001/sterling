@@ -94,30 +94,72 @@ export async function GET(
     const htmlContent = generateApplicationPacketHTML(packetData);
 
     // Generate PDF using production service (PDFShift)
-    const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');
-    const pdfBuffer = await generatePDFFromHTML({
-      html: htmlContent,
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px',
-      },
-    });
+    let pdfBuffer: Buffer;
+    try {
+      console.log("📄 [PDF Download] Starting PDF generation...");
+      const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');
+      pdfBuffer = await generatePDFFromHTML({
+        html: htmlContent,
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
+        },
+      });
+      console.log(`📄 [PDF Download] PDF generated successfully - Size: ${pdfBuffer.length} bytes`);
+    } catch (pdfError: any) {
+      console.error("📄 [PDF Download] PDF generation error:", pdfError);
+      console.error("📄 [PDF Download] Error message:", pdfError?.message);
+      console.error("📄 [PDF Download] Error stack:", pdfError?.stack);
+      
+      // Return detailed error for debugging
+      return NextResponse.json(
+        { 
+          error: pdfError?.message || "Failed to generate PDF",
+          details: process.env.NODE_ENV === 'development' ? pdfError?.stack : undefined
+        },
+        { status: 500 }
+      );
+    }
+
+    // Validate PDF buffer
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      console.error("📄 [PDF Download] PDF buffer is empty");
+      return NextResponse.json(
+        { error: "Generated PDF is empty" },
+        { status: 500 }
+      );
+    }
 
     // Return PDF as response
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="application-${submission._id.toString()}.pdf"`,
-      },
-    });
+    try {
+      console.log("📄 [PDF Download] Returning PDF response...");
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="application-${submission._id.toString()}.pdf"`,
+          'Content-Length': pdfBuffer.length.toString(),
+        },
+      });
+    } catch (responseError: any) {
+      console.error("📄 [PDF Download] Error creating response:", responseError);
+      return NextResponse.json(
+        { error: "Failed to create PDF response" },
+        { status: 500 }
+      );
+    }
   } catch (error: any) {
-    console.error("PDF generation error:", error);
+    console.error("📄 [PDF Download] Unexpected error:", error);
+    console.error("📄 [PDF Download] Error message:", error?.message);
+    console.error("📄 [PDF Download] Error stack:", error?.stack);
     return NextResponse.json(
-      { error: error.message || "Failed to generate PDF" },
+      { 
+        error: error?.message || "Failed to generate PDF",
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }

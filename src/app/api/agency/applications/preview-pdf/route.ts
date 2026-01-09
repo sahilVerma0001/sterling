@@ -79,30 +79,72 @@ export async function POST(req: NextRequest) {
     const htmlContent = generateApplicationPacketHTML(packetData);
 
     // Generate PDF using production service (PDFShift)
-    const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');
-    const pdfBuffer = await generatePDFFromHTML({
-      html: htmlContent,
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px',
-      },
-    });
+    let pdfBuffer: Buffer;
+    try {
+      console.log("📄 [PDF Preview] Starting PDF generation...");
+      const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');
+      pdfBuffer = await generatePDFFromHTML({
+        html: htmlContent,
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
+        },
+      });
+      console.log(`📄 [PDF Preview] PDF generated successfully - Size: ${pdfBuffer.length} bytes`);
+    } catch (pdfError: any) {
+      console.error("📄 [PDF Preview] PDF generation error:", pdfError);
+      console.error("📄 [PDF Preview] Error message:", pdfError?.message);
+      console.error("📄 [PDF Preview] Error stack:", pdfError?.stack);
+      
+      // Return detailed error for debugging
+      return NextResponse.json(
+        { 
+          error: pdfError?.message || "Failed to generate PDF preview",
+          details: process.env.NODE_ENV === 'development' ? pdfError?.stack : undefined
+        },
+        { status: 500 }
+      );
+    }
+
+    // Validate PDF buffer
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      console.error("📄 [PDF Preview] PDF buffer is empty");
+      return NextResponse.json(
+        { error: "Generated PDF is empty" },
+        { status: 500 }
+      );
+    }
 
     // Return PDF as response
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="application-preview-${Date.now()}.pdf"`,
-      },
-    });
+    try {
+      console.log("📄 [PDF Preview] Returning PDF response...");
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="application-preview-${Date.now()}.pdf"`,
+          'Content-Length': pdfBuffer.length.toString(),
+        },
+      });
+    } catch (responseError: any) {
+      console.error("📄 [PDF Preview] Error creating response:", responseError);
+      return NextResponse.json(
+        { error: "Failed to create PDF response" },
+        { status: 500 }
+      );
+    }
   } catch (error: any) {
-    console.error("PDF preview generation error:", error);
+    console.error("📄 [PDF Preview] Unexpected error:", error);
+    console.error("📄 [PDF Preview] Error message:", error?.message);
+    console.error("📄 [PDF Preview] Error stack:", error?.stack);
     return NextResponse.json(
-      { error: error.message || "Failed to generate PDF" },
+      { 
+        error: error?.message || "Failed to generate PDF preview",
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }

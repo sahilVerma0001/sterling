@@ -505,23 +505,42 @@ export default function QuoteFormPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate PDF');
+      if (!response.ok) {
+        // Try to get error message from response
+        let errorMessage = 'Failed to generate PDF';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error('PDF generation error:', errorData);
+        } catch (e) {
+          console.error('PDF generation failed with status:', response.status);
+        }
+        throw new Error(errorMessage);
+      }
 
-      // Get PDF blob
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `application-${formData.companyName || 'preview'}-${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success('PDF downloaded successfully!');
+      // Check if response is actually a PDF
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/pdf')) {
+        // Get PDF blob
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `application-${formData.companyName || 'preview'}-${Date.now()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast.success('PDF downloaded successfully!');
+      } else {
+        // Response is JSON error
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate PDF');
+      }
     } catch (error: any) {
       console.error('PDF download error:', error);
-      toast.error('Failed to download PDF');
+      toast.error(error?.message || 'Failed to download PDF. Please check the console for details.');
     } finally {
       setIsDownloadingPDF(false);
     }
