@@ -5,7 +5,7 @@ import connectDB from "@/lib/mongodb";
 import Submission from "@/models/Submission";
 import Agency from "@/models/Agency";
 import Quote from "@/models/Quote";
-import { generateApplicationPacketHTML, mapFormDataToPacketData } from "@/lib/services/pdf/ApplicationPacketPDF";
+import { generateApplicationPacketHTML, mapFormDataToPacketData, loadCapitalCoLogo } from "@/lib/services/pdf/ApplicationPacketPDF";
 
 /**
  * GET /api/admin/submissions/[id]/pdf
@@ -53,6 +53,9 @@ export async function GET(
     // Get quote if available (for invoice page)
     const quote = await Quote.findOne({ submissionId: submission._id });
 
+    // Load Capital & Co logo SVG
+    const capitalCoLogoSVG = await loadCapitalCoLogo();
+
     // Map form data to packet data format
     const formData = submission.payload || {};
     const packetData = mapFormDataToPacketData(
@@ -60,7 +63,8 @@ export async function GET(
       submission._id.toString(),
       agency,
       quote ? quote.toObject() : undefined,
-      submission
+      submission,
+      capitalCoLogoSVG
     );
 
     // Generate 12-page application packet HTML

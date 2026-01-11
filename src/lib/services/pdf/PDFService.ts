@@ -175,16 +175,26 @@ export async function generatePDFFromHTML(options: PDFGenerationOptions): Promis
       const htmlSizeKB = Buffer.byteLength(minifiedHTML, 'utf8') / 1024;
       console.error(`[PDF Service] HTML size was: ${htmlSizeKB.toFixed(2)} KB`);
       
-      // Check if it's a size limit error - ONLY if HTML is actually large (>1500 KB)
-      // This prevents false positives when PDFShift returns other errors
-      const isSizeError = htmlSizeKB > 1500 && (
-        error.message.includes('Document size too big') || 
-        (error.message.includes('too big') && error.message.includes('2MB')) ||
-        (error.message.includes('too big') && error.message.includes('2Mb'))
-      );
+      // Check if it's a size limit error
+      const isSizeError = error.message.includes('too big') || 
+                          error.message.includes('2Mb') || 
+                          error.message.includes('2MB') ||
+                          error.message.includes('more than 2Mb') ||
+                          error.message.includes('more than 2MB') ||
+                          (errorData.errors && errorData.errors.source && 
+                           errorData.errors.source.some((msg: string) => 
+                             msg.includes('more than 2Mb') || msg.includes('more than 2MB')));
+      
+      // In development, always fall back to Puppeteer for size errors
+      const isDevelopment = !process.env.VERCEL && process.env.NODE_ENV === 'development';
+      
+      if (isSizeError && isDevelopment) {
+        console.warn(`[PDF Service] PDFShift size limit exceeded (${htmlSizeKB.toFixed(2)} KB). Falling back to Puppeteer in development...`);
+        throw error; // Will be caught by Puppeteer fallback below
+      }
       
       // In production, if it's a size error, provide helpful message
-      if (isSizeError) {
+      if (isSizeError && (process.env.VERCEL || process.env.NODE_ENV === 'production')) {
         console.error('[PDF Service] PDFShift size limit exceeded. HTML size:', htmlSizeKB.toFixed(2), 'KB');
         throw new Error(`PDF size too large (${htmlSizeKB.toFixed(2)} KB). The document exceeds PDFShift's 2MB limit. Please optimize the content or upgrade your PDFShift plan.`);
       }

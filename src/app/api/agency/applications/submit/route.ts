@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongodb";
 import Submission from "@/models/Submission";
 import Agency from "@/models/Agency";
-import { generateApplicationPacketHTML, mapFormDataToPacketData } from "@/lib/services/pdf/ApplicationPacketPDF";
+import { generateApplicationPacketHTML, mapFormDataToPacketData, loadCapitalCoLogo } from "@/lib/services/pdf/ApplicationPacketPDF";
 import { savePDFToStorage } from "@/lib/services/pdf/storage";
 
 /**
@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
     try {
       console.log("📄 Starting PDF generation...");
       
+      // Load Capital & Co logo SVG
+      const capitalCoLogoSVG = await loadCapitalCoLogo();
+
       // Map form data to packet data format (no quote yet for new submissions)
       let packetData;
       try {
@@ -95,7 +98,8 @@ export async function POST(req: NextRequest) {
           submission._id.toString(),
           agency,
           undefined, // No quote yet for new submissions
-          submission
+          submission,
+          capitalCoLogoSVG
         );
         console.log("✅ Form data mapped successfully");
       } catch (mapError: any) {

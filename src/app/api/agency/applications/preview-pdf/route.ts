@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongodb";
 import Agency from "@/models/Agency";
-import { generateApplicationPacketHTML, mapFormDataToPacketData } from "@/lib/services/pdf/ApplicationPacketPDF";
+import { generateApplicationPacketHTML, mapFormDataToPacketData, loadCapitalCoLogo } from "@/lib/services/pdf/ApplicationPacketPDF";
 
 /**
  * POST /api/agency/applications/preview-pdf
@@ -66,13 +66,17 @@ export async function POST(req: NextRequest) {
     // Create a temporary submission ID for preview
     const tempSubmissionId = `preview-${Date.now()}`;
 
+    // Load Capital & Co logo SVG
+    const capitalCoLogoSVG = await loadCapitalCoLogo();
+
     // Map form data to packet data format
     const packetData = mapFormDataToPacketData(
       formData,
       tempSubmissionId,
       agency,
       undefined, // No quote for preview
-      { programName: programName || "Advantage Contractor GL" } as any
+      { programName: programName || "Advantage Contractor GL" } as any,
+      capitalCoLogoSVG
     );
 
     // Generate 12-page application packet HTML

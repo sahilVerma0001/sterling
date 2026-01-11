@@ -86,6 +86,8 @@ function SubmissionDetailsContent() {
   const [error, setError] = useState("");
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Check for success message from edit
   useEffect(() => {
@@ -222,12 +224,12 @@ function SubmissionDetailsContent() {
                   <path d="M40 47 L60 47" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
                   <defs>
                     <linearGradient id="logoGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#00BCD4" stopOpacity="0.9" />
-                      <stop offset="100%" stopColor="#0097A7" stopOpacity="0.95" />
+                      <stop offset="0%" stopColor="#00BCD4" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#0097A7" stopOpacity={0.95} />
                     </linearGradient>
                     <linearGradient id="logoGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.1" />
+                      <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#FFFFFF" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -299,12 +301,12 @@ function SubmissionDetailsContent() {
                 <path d="M40 47 L60 47" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
                 <defs>
                   <linearGradient id="logoGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00BCD4" stopOpacity="0.9" />
-                    <stop offset="100%" stopColor="#0097A7" stopOpacity="0.95" />
+                    <stop offset="0%" stopColor="#00BCD4" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#0097A7" stopOpacity={0.95} />
                   </linearGradient>
                   <linearGradient id="logoGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.1" />
+                    <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
               </svg>
@@ -586,13 +588,216 @@ function SubmissionDetailsContent() {
 
           {/* Application Data */}
           {submission.payload && Object.keys(submission.payload).length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Application Data</h2>
-              <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
-                <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                  {JSON.stringify(submission.payload, null, 2)}
-                </pre>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Application Data</h2>
+                  <p className="text-xs text-gray-500 mt-1">{Object.keys(submission.payload).length} fields</p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(submission.payload, null, 2));
+                    toast.success("Application data copied to clipboard!");
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-[#00BCD4] hover:bg-cyan-50 rounded-lg border border-[#00BCD4]/20 hover:border-[#00BCD4]/40 transition-all flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy All
+                </button>
               </div>
+              
+              {/* Search Bar */}
+              <div className="mb-4">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search fields..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00BCD4] focus:border-[#00BCD4] outline-none"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(submission.payload)
+                  .filter(([key, value]) => {
+                    if (!searchTerm) return true;
+                    const search = searchTerm.toLowerCase();
+                    const formattedKey = key
+                      .replace(/([A-Z])/g, ' $1')
+                      .replace(/^./, (str) => str.toUpperCase())
+                      .trim()
+                      .toLowerCase();
+                    const valueStr = typeof value === 'object' 
+                      ? JSON.stringify(value).toLowerCase()
+                      : String(value).toLowerCase();
+                    return formattedKey.includes(search) || valueStr.includes(search);
+                  })
+                  .map(([key, value]) => {
+                    // Format the key to be more readable
+                    const formattedKey = key
+                      .replace(/([A-Z])/g, ' $1')
+                      .replace(/^./, (str) => str.toUpperCase())
+                      .trim();
+                    
+                    // Format the value based on its type
+                    let formattedValue: string;
+                    let valueType: 'text' | 'boolean' | 'object' | 'number' | 'email' | 'url' | 'date' = 'text';
+                    
+                    if (value === null || value === undefined) {
+                      formattedValue = 'N/A';
+                    } else if (typeof value === 'boolean') {
+                      formattedValue = value ? 'Yes' : 'No';
+                      valueType = 'boolean';
+                    } else if (typeof value === 'number') {
+                      formattedValue = value.toLocaleString();
+                      valueType = 'number';
+                    } else if (typeof value === 'object') {
+                      formattedValue = JSON.stringify(value, null, 2);
+                      valueType = 'object';
+                    } else {
+                      formattedValue = String(value);
+                      // Detect email
+                      if (formattedValue.includes('@') && formattedValue.includes('.')) {
+                        valueType = 'email';
+                      }
+                      // Detect URL
+                      if (formattedValue.startsWith('http://') || formattedValue.startsWith('https://')) {
+                        valueType = 'url';
+                      }
+                      // Detect date
+                      if (/^\d{4}-\d{2}-\d{2}/.test(formattedValue) || formattedValue.match(/\d{1,2}\/\d{1,2}\/\d{4}/)) {
+                        valueType = 'date';
+                      }
+                    }
+                    
+                    const handleCopy = () => {
+                      const textToCopy = typeof value === 'object' 
+                        ? JSON.stringify(value, null, 2)
+                        : String(value);
+                      navigator.clipboard.writeText(textToCopy);
+                      setCopiedField(key);
+                      toast.success("Copied to clipboard!");
+                      setTimeout(() => setCopiedField(null), 2000);
+                    };
+                    
+                    return (
+                      <div 
+                        key={key} 
+                        className="bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all group"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {valueType === 'email' && (
+                              <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                            {valueType === 'url' && (
+                              <svg className="w-4 h-4 text-purple-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                            )}
+                            {valueType === 'number' && (
+                              <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                              </svg>
+                            )}
+                            {valueType === 'boolean' && (
+                              <svg className={`w-4 h-4 flex-shrink-0 ${value ? 'text-green-500' : 'text-red-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={value ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12"} />
+                              </svg>
+                            )}
+                            {valueType === 'date' && (
+                              <svg className="w-4 h-4 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">{formattedKey}</p>
+                          </div>
+                          <button
+                            onClick={handleCopy}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-[#00BCD4] flex-shrink-0"
+                            title="Copy value"
+                          >
+                            {copiedField === key ? (
+                              <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                        {typeof value === 'object' && value !== null ? (
+                          <div className="bg-gray-900 rounded-lg p-3 border border-gray-700 max-h-48 overflow-auto">
+                            <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap break-words">
+                              {formattedValue}
+                            </pre>
+                          </div>
+                        ) : valueType === 'url' ? (
+                          <a 
+                            href={formattedValue} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-[#00BCD4] hover:text-[#00ACC1] break-all underline flex items-center gap-1"
+                          >
+                            {formattedValue}
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        ) : valueType === 'email' ? (
+                          <a 
+                            href={`mailto:${formattedValue}`}
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-700 break-all"
+                          >
+                            {formattedValue}
+                          </a>
+                        ) : (
+                          <p className={`text-sm font-semibold break-words ${
+                            valueType === 'boolean' 
+                              ? (value ? 'text-green-600' : 'text-red-600')
+                              : valueType === 'number'
+                              ? 'text-green-700'
+                              : 'text-gray-900'
+                          }`}>
+                            {formattedValue}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              {Object.entries(submission.payload).filter(([key, value]) => {
+                if (!searchTerm) return false;
+                const search = searchTerm.toLowerCase();
+                const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()).trim().toLowerCase();
+                const valueStr = typeof value === 'object' ? JSON.stringify(value).toLowerCase() : String(value).toLowerCase();
+                return !formattedKey.includes(search) && !valueStr.includes(search);
+              }).length === Object.keys(submission.payload).length && searchTerm && (
+                <div className="mt-4 text-center text-sm text-gray-500">
+                  No fields match your search
+                </div>
+              )}
             </div>
           )}
 
