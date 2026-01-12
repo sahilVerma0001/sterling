@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { getStateCode } from "@/lib/utils/stateConverter";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import SaveStatusIndicator from "@/components/forms/SaveStatusIndicator";
+import { formatCurrency, formatCurrencyInput, parseCurrency } from "@/lib/utils/currencyFormatter";
 
 interface Carrier {
   _id: string;
@@ -206,7 +207,7 @@ export default function AdminQuotePage() {
     const calculateTax = async () => {
       if (!carrierQuoteUSD || !submission) return;
       
-      const carrierQuote = parseFloat(carrierQuoteUSD);
+      const carrierQuote = parseCurrency(carrierQuoteUSD);
       if (isNaN(carrierQuote) || carrierQuote <= 0) {
         setPremiumTaxAmountUSD("");
         setPremiumTaxPercent("");
@@ -224,14 +225,14 @@ export default function AdminQuotePage() {
       
       setCalculatingTax(true);
       try {
-        const response = await fetch(`/api/tax/calculate?state=${state}&premium=${carrierQuote}`);
+        const response = await fetch(`/api/tax/calculate?state=${state}&premium=${carrierQuote.toFixed(2)}`);
         const data = await response.json();
         
         console.log(`[Quote Page] Tax API response:`, data);
         
         if (data.success && data.taxRate && data.taxAmount) {
           setPremiumTaxPercent(data.taxRate.toFixed(2));
-          setPremiumTaxAmountUSD(data.taxAmount.toFixed(2));
+          setPremiumTaxAmountUSD(data.taxAmount.toString());
         } else {
           // Fallback to manual entry if API fails
           console.warn("Tax calculator API failed, using manual entry");
@@ -250,11 +251,11 @@ export default function AdminQuotePage() {
   // Calculate tax amount when tax percent is manually changed
   useEffect(() => {
     if (carrierQuoteUSD && premiumTaxPercent) {
-      const carrierQuote = parseFloat(carrierQuoteUSD);
+      const carrierQuote = parseCurrency(carrierQuoteUSD);
       const taxPercent = parseFloat(premiumTaxPercent);
       if (!isNaN(carrierQuote) && !isNaN(taxPercent) && carrierQuote > 0) {
         const taxAmount = (carrierQuote * taxPercent) / 100;
-        setPremiumTaxAmountUSD(taxAmount.toFixed(2));
+        setPremiumTaxAmountUSD(taxAmount.toString());
       } else {
         setPremiumTaxAmountUSD("");
       }
@@ -282,12 +283,12 @@ export default function AdminQuotePage() {
   const calculateBreakdown = () => {
     if (!carrierQuoteUSD || !selectedCarrier) return null;
 
-    const carrierQuote = parseFloat(carrierQuoteUSD);
+    const carrierQuote = parseCurrency(carrierQuoteUSD);
     if (isNaN(carrierQuote) || carrierQuote <= 0) return null;
     
     const brokerFee = brokerFeeFromForm; // From application form
-    const taxAmount = parseFloat(premiumTaxAmountUSD) || 0;
-    const policyFee = parseFloat(policyFeeUSD) || 0;
+    const taxAmount = parseCurrency(premiumTaxAmountUSD) || 0;
+    const policyFee = parseCurrency(policyFeeUSD) || 0;
     
     // No wholesale fee - removed per user request
     const finalAmount = carrierQuote + brokerFee + taxAmount + policyFee;
@@ -436,7 +437,7 @@ export default function AdminQuotePage() {
       return;
     }
 
-    const quoteAmount = parseFloat(carrierQuoteUSD);
+    const quoteAmount = parseCurrency(carrierQuoteUSD);
     if (isNaN(quoteAmount) || quoteAmount <= 0) {
       setError("Quote amount must be greater than 0");
       setSubmitting(false);
@@ -464,8 +465,8 @@ export default function AdminQuotePage() {
           carrierId: selectedCarrierId,
           carrierQuoteUSD: quoteAmount,
           premiumTaxPercent: premiumTaxPercent || undefined,
-          premiumTaxAmountUSD: premiumTaxAmountUSD || undefined,
-          policyFeeUSD: policyFeeUSD || undefined,
+          premiumTaxAmountUSD: premiumTaxAmountUSD ? parseCurrency(premiumTaxAmountUSD) : undefined,
+          policyFeeUSD: policyFeeUSD ? parseCurrency(policyFeeUSD) : undefined,
           brokerFeeAmountUSD: brokerFeeFromForm || undefined,
           limits: Object.keys(limits).some(k => limits[k as keyof typeof limits]) ? limits : undefined,
           excessLimit: excessLimit || undefined,
@@ -752,14 +753,19 @@ export default function AdminQuotePage() {
                 </span>
                 <input
                   id="carrierQuote"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={carrierQuoteUSD}
-                  onChange={(e) => setCarrierQuoteUSD(e.target.value)}
+                  type="text"
+                  value={carrierQuoteUSD ? formatCurrencyInput(carrierQuoteUSD) : ''}
+                  onChange={(e) => {
+                    const formatted = formatCurrencyInput(e.target.value);
+                    setCarrierQuoteUSD(formatted);
+                  }}
+                  onBlur={(e) => {
+                    const parsed = parseCurrency(e.target.value);
+                    setCarrierQuoteUSD(parsed > 0 ? parsed.toString() : '');
+                  }}
                   required
                   className="w-full pl-10 pr-4 py-3 bg-white border-2 border-emerald-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all hover:border-emerald-300 !text-gray-900"
-                  placeholder="0.00"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -824,10 +830,8 @@ export default function AdminQuotePage() {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={premiumTaxAmountUSD}
+                      type="text"
+                      value={premiumTaxAmountUSD ? formatCurrency(parseFloat(premiumTaxAmountUSD), 2) : ''}
                       readOnly
                       className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 font-semibold !text-gray-900"
                       placeholder="Auto-calculated"
@@ -843,13 +847,18 @@ export default function AdminQuotePage() {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={policyFeeUSD}
-                      onChange={(e) => setPolicyFeeUSD(e.target.value)}
+                      type="text"
+                      value={policyFeeUSD ? formatCurrencyInput(policyFeeUSD) : ''}
+                      onChange={(e) => {
+                        const formatted = formatCurrencyInput(e.target.value);
+                        setPolicyFeeUSD(formatted);
+                      }}
+                      onBlur={(e) => {
+                        const parsed = parseCurrency(e.target.value);
+                        setPolicyFeeUSD(parsed > 0 ? parsed.toString() : '');
+                      }}
                       className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all hover:border-gray-300 !text-gray-900"
-                      placeholder="0.00"
+                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -864,7 +873,7 @@ export default function AdminQuotePage() {
                       <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold">$</span>
                       <input
                         type="text"
-                        value={brokerFeeFromForm.toFixed(2)}
+                        value={formatCurrency(brokerFeeFromForm, 2)}
                         readOnly
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 font-semibold !text-gray-900"
                       />
@@ -1159,14 +1168,14 @@ export default function AdminQuotePage() {
                   <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
                     <span className="text-gray-700 font-medium">Carrier Quote:</span>
                     <span className="font-bold text-gray-900 text-lg">
-                      ${breakdown.carrierQuote.toFixed(2)}
+                      {formatCurrency(breakdown.carrierQuote, 2)}
                     </span>
                   </div>
                   {breakdown.premiumTaxAmount > 0 && (
                     <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
                       <span className="text-gray-700 font-medium">Premium Tax:</span>
                       <span className="font-bold text-gray-900">
-                        ${breakdown.premiumTaxAmount.toFixed(2)}
+                        {formatCurrency(breakdown.premiumTaxAmount, 2)}
                       </span>
                     </div>
                   )}
@@ -1174,7 +1183,7 @@ export default function AdminQuotePage() {
                     <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
                       <span className="text-gray-700 font-medium">Policy Fee:</span>
                       <span className="font-bold text-gray-900">
-                        ${breakdown.policyFeeAmount.toFixed(2)}
+                        {formatCurrency(breakdown.policyFeeAmount, 2)}
                       </span>
                     </div>
                   )}
@@ -1182,7 +1191,7 @@ export default function AdminQuotePage() {
                     <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
                       <span className="text-gray-700 font-medium">Broker Fee:</span>
                       <span className="font-bold text-gray-900">
-                        ${breakdown.brokerFeeAmount.toFixed(2)}
+                        {formatCurrency(breakdown.brokerFeeAmount, 2)}
                       </span>
                     </div>
                   )}
@@ -1191,7 +1200,7 @@ export default function AdminQuotePage() {
                       Total Cost:
                     </span>
                     <span className="text-2xl font-black text-rose-600">
-                      ${breakdown.finalAmount.toFixed(2)}
+                      {formatCurrency(breakdown.finalAmount, 2)}
                     </span>
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useGooglePlacesAutocomplete } from "@/hooks/useGooglePlacesAutocomplete";
+import { formatCurrency, formatCurrencyInput, parseCurrency } from "@/lib/utils/currencyFormatter";
 
 // Helper component for Yes/No radio buttons
 const YesNoRadio = ({ 
@@ -16,8 +17,8 @@ const YesNoRadio = ({
   onInteraction
 }: { 
   label: string; 
-  value: boolean; 
-  onChange: (val: boolean) => void;
+  value: boolean | null | undefined; 
+  onChange: (val: boolean | null) => void;
   required?: boolean;
   onInteraction?: () => void;
 }) => (
@@ -81,7 +82,6 @@ export default function QuoteFormPage() {
   );
   const [formData, setFormData] = useState<any>({
     // Indication Information
-    leadSource: "",
     companyName: "",
     zip: "",
     state: "California",
@@ -109,24 +109,24 @@ export default function QuoteFormPage() {
     lossesLast5Years: "0",
     effectiveDate: "",
     selectedStates: [],
-    willPerformStructuralWork: false,
+    willPerformStructuralWork: null,
     
     // Endorsements
-    blanketAdditionalInsured: false,
-    blanketWaiverOfSubrogation: false,
-    blanketPrimaryWording: false,
-    blanketPerProjectAggregate: false,
-    blanketCompletedOperations: false,
-    actsOfTerrorism: false,
-    noticeCancellationThirdParties: false,
+    blanketAdditionalInsured: null,
+    blanketWaiverOfSubrogation: null,
+    blanketPrimaryWording: null,
+    blanketPerProjectAggregate: null,
+    blanketCompletedOperations: null,
+    actsOfTerrorism: null,
+    noticeCancellationThirdParties: null,
     
     // Payment Options
     brokerFee: "0",
-    displayBrokerFee: false,
+    displayBrokerFee: null,
     paymentOption: "Full Pay",
     
     // Company Information
-    contractorsLicense: false,
+    contractorsLicense: null,
     licenseNumber: "",
     licenseClassification: "",
     dba: "",
@@ -138,7 +138,7 @@ export default function QuoteFormPage() {
     fax: "",
     email: "",
     website: "",
-    carrierDescriptionOk: false,
+    carrierDescriptionOk: null,
     carrierApprovedDescription: "",
     
     // Address
@@ -146,7 +146,7 @@ export default function QuoteFormPage() {
     aptSuite: "",
     city: "",
     addressState: "",
-    mailingAddressSame: true,
+    mailingAddressSame: null,
     mailingStreet: "",
     mailingAptSuite: "",
     mailingZip: "",
@@ -154,62 +154,63 @@ export default function QuoteFormPage() {
     mailingState: "",
     
     // Resume Questions
-    employeesHave3YearsExp: false,
-    hasConstructionSupervisionExp: false,
-    hasConstructionCertifications: false,
+    employeesHave3YearsExp: null,
+    hasConstructionSupervisionExp: null,
+    hasConstructionCertifications: null,
     certificationsExplanation: "",
     
     // Type of Work
     maxInteriorStories: "",
     maxExteriorStories: "",
-    workBelowGrade: false,
+    workBelowGrade: null,
     belowGradeDepth: "",
     belowGradePercent: "",
-    buildOnHillside: false,
+    buildOnHillside: null,
     hillsideExplanation: "",
-    performRoofingOps: false,
+    performRoofingOps: null,
     roofingOpsExplanation: "",
-    actAsGeneralContractor: false,
+    actAsGeneralContractor: null,
     generalContractorExplanation: "",
-    performWaterproofing: false,
+    performWaterproofing: null,
     waterproofingExplanation: "",
-    useHeavyEquipment: false,
+    useHeavyEquipment: null,
     heavyEquipmentExplanation: "",
-    heavyEquipmentOperatorsCertified: false,
+    heavyEquipmentOperatorsCertified: null,
     heavyEquipmentYearsExpRequired: "",
-    workNewTractHomes: false,
+    workNewTractHomes: null,
     tractHomesExplanation: "",
-    workCondoConstruction: false,
+    workCondoConstruction: null,
     condoConstructionExplanation: "",
-    condoUnits15OrMore: false,
-    performCondoStructuralRepair: false,
+    condoUnits15OrMore: null,
+    performCondoStructuralRepair: null,
     condoRepairExplanation: "",
-    condoRepairUnits15OrMore: false,
-    performOCIPWork: false,
-    performHazardousWork: false,
+    condoRepairUnits15OrMore: null,
+    performOCIPWork: null,
+    performHazardousWork: null,
     hazardousWorkExplanation: "",
-    workOver5000SqFt: false,
+    workOver5000SqFt: null,
     over5000SqFtExplanation: "",
     over5000SqFtPercent: "",
     
     // Additional Business Info
-    performIndustrialOps: false,
+    performIndustrialOps: null,
     otherBusinessNames: "",
-    citedForOSHAViolations: false,
-    lossInfoVerifiable: false,
-    licensingActionTaken: false,
-    allowedLicenseUseByOthers: false,
-    lawsuitsFiled: false,
-    awareOfPotentialClaims: false,
-    hasWrittenContracts: false,
-    contractHasStartDate: false,
-    contractHasScopeOfWork: false,
-    contractIdentifiesSubcontractors: false,
-    contractHasSetPrice: false,
-    contractSignedByAllParties: false,
+    citedForOSHAViolations: null,
+    lossInfoVerifiable: null,
+    licensingActionTaken: null,
+    allowedLicenseUseByOthers: null,
+    lawsuitsFiled: null,
+    awareOfPotentialClaims: null,
+    hasWrittenContracts: null,
+    contractHasStartDate: null,
+    contractHasScopeOfWork: null,
+    contractIdentifiesSubcontractors: null,
+    contractHasSetPrice: null,
+    contractSignedByAllParties: null,
     
     // Excess Liability
-    addExcessLiability: false,
+    addExcessLiability: null,
+    excessLiabilityLimit: "", // 1M-5M dropdown
   });
 
   // Ensure class codes/description start blank on every mount to avoid stale values
@@ -425,7 +426,7 @@ export default function QuoteFormPage() {
   };
 
   const calculatePremium = () => {
-    const grossReceipts = parseFloat(formData.estimatedGrossReceipts) || 0;
+    const grossReceipts = parseCurrency(formData.estimatedGrossReceipts) || 0;
     let premium = grossReceipts * 0.015;
     
     const experience = parseInt(formData.yearsExperience) || 0;
@@ -736,19 +737,6 @@ export default function QuoteFormPage() {
             
             <div className="space-y-6 mt-1">
               <div className="grid grid-cols-[200px_1fr_320px] gap-x-6 items-center">
-                <label className="text-sm font-medium text-gray-900">Lead Source</label>
-                <div></div>
-                <select
-                  value={formData.leadSource}
-                  onChange={(e) => handleInputChange('leadSource', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded focus:ring-1 focus:ring-[#00BCD4] focus:border-[#00BCD4] text-sm"
-                >
-                  <option value="">None</option>
-                  <option value="capital_co">capital_co</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-[200px_1fr_320px] gap-x-6 items-center">
                 <label className="text-sm font-medium text-gray-900">
                   Company Name <span className="text-red-500">*</span>
                 </label>
@@ -791,9 +779,16 @@ export default function QuoteFormPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                   <input
-                    type="number"
-                    value={formData.estimatedGrossReceipts}
-                    onChange={(e) => handleInputChange('estimatedGrossReceipts', e.target.value)}
+                    type="text"
+                    value={formData.estimatedGrossReceipts ? formatCurrencyInput(formData.estimatedGrossReceipts) : ''}
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value);
+                      handleInputChange('estimatedGrossReceipts', formatted);
+                    }}
+                    onBlur={(e) => {
+                      const parsed = parseCurrency(e.target.value);
+                      handleInputChange('estimatedGrossReceipts', parsed > 0 ? parsed.toString() : '');
+                    }}
                     className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded focus:ring-1 focus:ring-[#00BCD4] focus:border-[#00BCD4] text-sm"
                   />
                 </div>
@@ -805,9 +800,16 @@ export default function QuoteFormPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                   <input
-                    type="number"
-                    value={formData.estimatedSubcontractingCosts}
-                    onChange={(e) => handleInputChange('estimatedSubcontractingCosts', e.target.value)}
+                    type="text"
+                    value={formData.estimatedSubcontractingCosts ? formatCurrencyInput(formData.estimatedSubcontractingCosts) : ''}
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value);
+                      handleInputChange('estimatedSubcontractingCosts', formatted);
+                    }}
+                    onBlur={(e) => {
+                      const parsed = parseCurrency(e.target.value);
+                      handleInputChange('estimatedSubcontractingCosts', parsed > 0 ? parsed.toString() : '');
+                    }}
                     className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded focus:ring-1 focus:ring-[#00BCD4] focus:border-[#00BCD4] text-sm"
                   />
                 </div>
@@ -819,9 +821,16 @@ export default function QuoteFormPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                   <input
-                    type="number"
-                    value={formData.estimatedMaterialCosts}
-                    onChange={(e) => handleInputChange('estimatedMaterialCosts', e.target.value)}
+                    type="text"
+                    value={formData.estimatedMaterialCosts ? formatCurrencyInput(formData.estimatedMaterialCosts) : ''}
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value);
+                      handleInputChange('estimatedMaterialCosts', formatted);
+                    }}
+                    onBlur={(e) => {
+                      const parsed = parseCurrency(e.target.value);
+                      handleInputChange('estimatedMaterialCosts', parsed > 0 ? parsed.toString() : '');
+                    }}
                     className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded focus:ring-1 focus:ring-[#00BCD4] focus:border-[#00BCD4] text-sm"
                   />
                 </div>
@@ -1250,11 +1259,18 @@ export default function QuoteFormPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                   <input
-                    type="number"
-                    value={formData.brokerFee}
-                    onChange={(e) => handleInputChange('brokerFee', e.target.value)}
+                    type="text"
+                    value={formData.brokerFee ? formatCurrencyInput(formData.brokerFee) : ''}
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value);
+                      handleInputChange('brokerFee', formatted);
+                    }}
+                    onBlur={(e) => {
+                      const parsed = parseCurrency(e.target.value);
+                      handleInputChange('brokerFee', parsed > 0 ? parsed.toString() : '0');
+                    }}
                     className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded focus:ring-1 focus:ring-[#00BCD4] text-sm"
-                    placeholder="0.00"
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -2191,6 +2207,26 @@ export default function QuoteFormPage() {
                 value={formData.addExcessLiability}
                 onChange={(val) => handleInputChange('addExcessLiability', val)}
               />
+              
+              {formData.addExcessLiability && (
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Excess Liability Limit
+                  </label>
+                  <select
+                    value={formData.excessLiabilityLimit || ""}
+                    onChange={(e) => handleInputChange('excessLiabilityLimit', e.target.value)}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-gray-900 font-semibold focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all hover:border-gray-300"
+                  >
+                    <option value="">Select Limit</option>
+                    <option value="1M">$1,000,000 (1M)</option>
+                    <option value="2M">$2,000,000 (2M)</option>
+                    <option value="3M">$3,000,000 (3M)</option>
+                    <option value="4M">$4,000,000 (4M)</option>
+                    <option value="5M">$5,000,000 (5M)</option>
+                  </select>
+                </div>
+              )}
             </div>
             </div>
           </div>

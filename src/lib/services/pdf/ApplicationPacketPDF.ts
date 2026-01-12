@@ -199,13 +199,13 @@ function generateQRCodeURL(text: string, size: number = 100, useTextFallback: bo
 }
 
 /**
- * Format Yes/No with underline for selected option
+ * Format Yes/No with styled options
  */
 function formatYesNo(value: boolean | undefined, defaultValue: boolean = false): string {
   const isYes = value ?? defaultValue;
   return isYes 
-    ? '<span style="text-decoration: underline;">Yes</span> <span>No</span>'
-    : '<span>Yes</span> <span style="text-decoration: underline;">No</span>';
+    ? '<span class="yes-option selected">Yes</span><span class="no-option">No</span>'
+    : '<span class="yes-option">Yes</span><span class="no-option selected">No</span>';
 }
 
 /**
@@ -1662,14 +1662,14 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       --spacing-lg: 0.4in;
       --spacing-xl: 0.6in;
       
-      /* Typography */
-      --font-family: 'Inter', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+      /* Typography - Inter Font */
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
       --font-size-xs: 9pt;
-      --font-size-sm: 10pt;
-      --font-size-base: 11pt;
-      --font-size-lg: 12pt;
-      --font-size-xl: 14pt;
-      --font-size-2xl: 16pt;
+      --font-size-sm: 10pt; /* Field labels: 13-14px ≈ 10-10.5pt */
+      --font-size-base: 12pt; /* Input text: 16-18px ≈ 12-13.5pt */
+      --font-size-lg: 13.5pt; /* Input text larger: 18px ≈ 13.5pt */
+      --font-size-xl: 16.5pt; /* Section headers: 22-24px ≈ 16.5-18pt */
+      --font-size-2xl: 18pt; /* Section headers larger: 24px ≈ 18pt */
       
       /* Shadows */
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -1685,10 +1685,36 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       box-sizing: border-box;
     }
     
+    /* Inter Font Face - Modern Fintech Style */
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: local('Inter Regular'), local('Inter-Regular');
+    }
+    
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: local('Inter Medium'), local('Inter-Medium');
+    }
+    
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: local('Inter SemiBold'), local('Inter-SemiBold');
+    }
+    
     body {
       font-family: var(--font-family);
       font-size: var(--font-size-base);
-      line-height: 1.7;
+      font-weight: 400; /* Inter Regular */
+      line-height: 1.6;
       color: var(--text-primary);
       background: var(--bg-white);
       -webkit-font-smoothing: antialiased;
@@ -1705,7 +1731,7 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       position: relative;
       background: #fff;
       page-break-after: always;
-      overflow: hidden;
+      overflow: hidden; /* Ensure all content fits on single pages */
     }
     
     .main-content {
@@ -2414,8 +2440,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .section-title-page2 {
-      font-size: 11pt;
-      font-weight: 600;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       margin-bottom: 0.06in;
       color: #1f2937;
       line-height: 1.3;
@@ -2600,6 +2626,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      width: 87.5%; /* Use 85-90% of page width */
+      max-width: 87.5%;
     }
     
     .page3-isc .section-title-uppercase-page3 {
@@ -2692,20 +2720,52 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page3-isc .question-item-page3 {
-      margin-bottom: 0.06in;
+      margin-bottom: 0.12in; /* Increased spacing between questions */
     }
     
     .page3-isc .question-text-page3 {
       font-size: 10pt;
       line-height: 1.25;
-      margin-bottom: 0.03in;
+      margin-bottom: 0.08in; /* Increased spacing before Yes/No */
       color: #1f2937;
     }
     
     .page3-isc .yes-no-options-page3 {
-      font-size: 10pt;
-      margin-bottom: 0.03in;
+      font-size: 11pt;
+      font-weight: 500; /* Inter Medium */
+      margin-bottom: 0.08in; /* Increased spacing after Yes/No */
       color: #1f2937;
+      display: flex;
+      gap: 0.3in; /* Space between Yes and No */
+      align-items: center;
+    }
+    
+    .page3-isc .yes-no-options-page3 .yes-option,
+    .page3-isc .yes-no-options-page3 .no-option {
+      padding: 0.08in 0.2in;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      background: #ffffff;
+      min-width: 0.8in;
+      text-align: center;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    
+    .page3-isc .yes-no-options-page3 .yes-option.selected {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #3b82f6;
+      color: #1e40af;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    }
+    
+    .page3-isc .yes-no-options-page3 .no-option.selected {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-color: #ef4444;
+      color: #991b1b;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
     }
     
     .page3-isc .explanation-field-page3 {
@@ -2760,6 +2820,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      width: 87.5%; /* Use 85-90% of page width */
+      max-width: 87.5%;
     }
     
     .page4-isc .section-title-uppercase-page4 {
@@ -2792,20 +2854,52 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page4-isc .question-item-page4 {
-      margin-bottom: 0.05in;
+      margin-bottom: 0.12in; /* Increased spacing between questions */
     }
     
     .page4-isc .question-text-page4 {
       font-size: 10pt;
       line-height: 1.25;
-      margin-bottom: 0.02in;
+      margin-bottom: 0.08in; /* Increased spacing before Yes/No */
       color: #1f2937;
     }
     
     .page4-isc .yes-no-options-page4 {
-      font-size: 10pt;
-      margin-bottom: 0.02in;
+      font-size: 11pt;
+      font-weight: 500; /* Inter Medium */
+      margin-bottom: 0.08in; /* Increased spacing after Yes/No */
       color: #1f2937;
+      display: flex;
+      gap: 0.3in; /* Space between Yes and No */
+      align-items: center;
+    }
+    
+    .page4-isc .yes-no-options-page4 .yes-option,
+    .page4-isc .yes-no-options-page4 .no-option {
+      padding: 0.08in 0.2in;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      background: #ffffff;
+      min-width: 0.8in;
+      text-align: center;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    
+    .page4-isc .yes-no-options-page4 .yes-option.selected {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #3b82f6;
+      color: #1e40af;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    }
+    
+    .page4-isc .yes-no-options-page4 .no-option.selected {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-color: #ef4444;
+      color: #991b1b;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
     }
     
     .page4-isc .explanation-field-page4 {
@@ -2892,6 +2986,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      width: 87.5%; /* Use 85-90% of page width */
+      max-width: 87.5%;
     }
     
     .page5-isc .section-title-uppercase-page5 {
@@ -2924,20 +3020,52 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page5-isc .question-item-page5 {
-      margin-bottom: 0.05in;
+      margin-bottom: 0.12in; /* Increased spacing between questions */
     }
     
     .page5-isc .question-text-page5 {
       font-size: 10pt;
       line-height: 1.25;
-      margin-bottom: 0.02in;
+      margin-bottom: 0.08in; /* Increased spacing before Yes/No */
       color: #1f2937;
     }
     
     .page5-isc .yes-no-options-page5 {
-      font-size: 10pt;
-      margin-bottom: 0.02in;
+      font-size: 11pt;
+      font-weight: 500; /* Inter Medium */
+      margin-bottom: 0.08in; /* Increased spacing after Yes/No */
       color: #1f2937;
+      display: flex;
+      gap: 0.3in; /* Space between Yes and No */
+      align-items: center;
+    }
+    
+    .page5-isc .yes-no-options-page5 .yes-option,
+    .page5-isc .yes-no-options-page5 .no-option {
+      padding: 0.08in 0.2in;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      background: #ffffff;
+      min-width: 0.8in;
+      text-align: center;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    
+    .page5-isc .yes-no-options-page5 .yes-option.selected {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #3b82f6;
+      color: #1e40af;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    }
+    
+    .page5-isc .yes-no-options-page5 .no-option.selected {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-color: #ef4444;
+      color: #991b1b;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
     }
     
     .page5-isc .sub-question-header-page5 {
@@ -3354,8 +3482,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page8-isc .section-title-bold-page8 {
-      font-size: 10pt;
-      font-weight: 800;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       margin-top: 0.08in;
       margin-bottom: 0.05in;
       color: #0f172a;
@@ -3500,8 +3628,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page9-isc .section-title-bold-page9 {
-      font-size: 11pt;
-      font-weight: 800;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       text-align: center;
       text-decoration: underline;
       margin-bottom: 0.08in;
@@ -3619,8 +3747,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page10-isc .section-title-bold-page10 {
-      font-size: 12pt;
-      font-weight: 800;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       text-align: center;
       text-decoration: underline;
       margin-bottom: 0.15in;
@@ -4104,18 +4232,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .section-title {
-      font-size: var(--font-size-xl);
-      font-weight: 700;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       margin-bottom: var(--spacing-sm);
       text-transform: uppercase;
       color: var(--text-primary);
-      letter-spacing: 0.8px;
-      line-height: 1.4;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
     }
     
     .section-title-underline {
-      font-size: var(--font-size-xl);
-      font-weight: 700;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       margin: var(--spacing-md) 0 var(--spacing-sm) 0;
       text-transform: uppercase;
       text-decoration: underline;
@@ -4123,21 +4251,21 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       text-underline-offset: 6px;
       text-decoration-color: var(--primary-color);
       color: var(--text-primary);
-      letter-spacing: 0.8px;
-      line-height: 1.4;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
     }
     
     .section-title-uppercase {
-      font-size: var(--font-size-xl);
-      font-weight: 700;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       margin: var(--spacing-lg) 0 var(--spacing-md) 0;
       text-transform: uppercase;
       color: var(--text-primary);
-      letter-spacing: 0.8px;
+      letter-spacing: 0.5px;
       padding: var(--spacing-xs) var(--spacing-sm);
       padding-bottom: var(--spacing-xs);
       border-bottom: 3px solid var(--primary-color);
-      line-height: 1.4;
+      line-height: 1.3;
       background: linear-gradient(135deg, rgba(74, 158, 255, 0.05) 0%, transparent 100%);
       border-radius: 6px 6px 0 0;
       position: relative;
@@ -4154,10 +4282,11 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .field-row {
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-base); /* 16-18px ≈ 12-13.5pt - Input text */
+      font-weight: 400; /* Inter Regular */
       margin: var(--spacing-sm) 0;
       padding: var(--spacing-xs) var(--spacing-sm);
-      line-height: 1.8;
+      line-height: 1.6;
       color: var(--text-secondary);
       border-bottom: 1px dotted var(--border-light);
       position: relative;
@@ -4175,8 +4304,9 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     
     .field-row strong {
       color: var(--text-primary);
-      font-weight: 600;
-      letter-spacing: 0.3px;
+      font-weight: 500; /* Inter Medium for field labels */
+      font-size: var(--font-size-sm); /* 13-14px ≈ 10-10.5pt */
+      letter-spacing: 0.2px;
       display: inline-block;
       min-width: 2.5in;
       margin-right: var(--spacing-xs);
@@ -4187,10 +4317,11 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .field-value {
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-base); /* 16-18px ≈ 12-13.5pt - Input text */
+      font-weight: 400; /* Inter Regular */
       margin: var(--spacing-xs) 0;
       color: var(--text-primary);
-      line-height: 1.7;
+      line-height: 1.6;
     }
     
     .field-value-large {
@@ -4761,12 +4892,12 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .section-title-bold {
-      font-size: var(--font-size-xl);
-      font-weight: 700;
+      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
+      font-weight: 600; /* Inter SemiBold */
       margin: var(--spacing-md) 0 var(--spacing-md) 0;
       text-transform: uppercase;
       color: var(--text-primary);
-      letter-spacing: 0.8px;
+      letter-spacing: 0.5px;
       padding: var(--spacing-xs) var(--spacing-sm);
       border-bottom: 3px solid var(--primary-color);
       background: var(--bg-light);
