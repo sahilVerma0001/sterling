@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       console.log("📄 Generating 12-page application packet HTML...");
       let htmlContent: string;
       try {
-        htmlContent = generateApplicationPacketHTML(packetData);
+        htmlContent = await generateApplicationPacketHTML(packetData);
         console.log(`📄 HTML content length: ${htmlContent.length} characters`);
       } catch (htmlError: any) {
         console.error("❌ Error generating HTML:", htmlError?.message);

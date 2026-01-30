@@ -229,30 +229,6 @@ body {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-/* Ensure all form inputs have white background */
-input[type="text"],
-input[type="number"],
-input[type="email"],
-input[type="tel"],
-input[type="date"],
-input[type="password"],
-textarea,
-select {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-}
-
-input[type="text"]:disabled,
-input[type="number"]:disabled,
-input[type="email"]:disabled,
-input[type="tel"]:disabled,
-input[type="date"]:disabled,
-textarea:disabled,
-select:disabled {
-  background-color: #f3f4f6 !important;
-  color: #6b7280 !important;
-}
-
 /* Badge Premium Styles */
 .badge-premium {
   display: inline-flex;

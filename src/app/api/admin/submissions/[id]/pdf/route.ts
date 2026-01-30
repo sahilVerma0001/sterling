@@ -68,7 +68,7 @@ export async function GET(
     );
 
     // Generate 12-page application packet HTML
-    const htmlContent = generateApplicationPacketHTML(packetData);
+    const htmlContent = await generateApplicationPacketHTML(packetData);
 
     // Generate PDF using production service (PDFShift)
     const { generatePDFFromHTML } = await import('@/lib/services/pdf/PDFService');

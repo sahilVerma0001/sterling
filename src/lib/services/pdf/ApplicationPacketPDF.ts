@@ -3,7 +3,10 @@
  * Matches ISC application packet format with Capital & Co branding
  */
 
+import QRCode from 'qrcode';
+
 interface ApplicationPacketData {
+  qrCodeDataUrl?: string; // Base64 QR code data URL
   // Application Metadata
   applicationId: string;
   submissionId: string;
@@ -201,9 +204,19 @@ function generateQRCodeURL(text: string, size: number = 100, useTextFallback: bo
 /**
  * Format Yes/No with styled options
  */
-function formatYesNo(value: boolean | undefined, defaultValue: boolean = false): string {
-  const isYes = value ?? defaultValue;
-  return isYes 
+function formatYesNo(value: boolean | null | undefined, defaultValue?: boolean): string {
+  // If value is explicitly null or undefined and no default, show neither selected
+  if (value === null || value === undefined) {
+    if (defaultValue === undefined) {
+      return '<span class="yes-option">Yes</span><span class="no-option">No</span>';
+    }
+    // Use default value if provided
+    return defaultValue
+      ? '<span class="yes-option selected">Yes</span><span class="no-option">No</span>'
+      : '<span class="yes-option">Yes</span><span class="no-option selected">No</span>';
+  }
+  // Value is explicitly true or false
+  return value 
     ? '<span class="yes-option selected">Yes</span><span class="no-option">No</span>'
     : '<span class="yes-option">Yes</span><span class="no-option selected">No</span>';
 }
@@ -239,13 +252,33 @@ function generateCapitalCoLogoHTML(svgContent?: string, size: string = '100%', l
 /**
  * Generate Page 1: Bind Request Checklist
  */
-// Helper function to generate QR code HTML (text-only for production to reduce size)
-function generateQRCodeHTML(text: string, size: number = 80): string {
-  const qrUrl = generateQRCodeURL(text, size, true);
-  if (qrUrl) {
-    return `<div class="qr-code"><img src="${qrUrl}" alt="QR Code" /></div>`;
+/**
+ * Generate QR Code as base64 data URL (no external API calls)
+ */
+async function generateQRCodeBase64(text: string, size: number = 200): Promise<string> {
+  try {
+    const qrCodeDataUrl = await QRCode.toDataURL(text, {
+      width: size,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'M'
+    });
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.error('[QR Code] Error generating QR code:', error);
+    // Return a simple placeholder SVG if QR generation fails
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5RUiBDb2RlPC90ZXh0Pjwvc3ZnPg==';
   }
-  return `<div class="qr-code-text-only">${text}</div>`;
+}
+
+/**
+ * Generate QR Code HTML with embedded base64 data URL
+ */
+function generateQRCodeHTML(qrCodeDataUrl: string): string {
+  return `<div class="qr-code"><img src="${qrCodeDataUrl}" alt="QR Code" style="width: 0.7in; height: 0.7in; display: block;" /></div>`;
 }
 
 function generatePage1(data: ApplicationPacketData): string {
@@ -277,10 +310,18 @@ function generatePage1(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical page1-title">Bind Request Checklist</div>
         <div class="qr-container qr-page1">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page1">${qrCodeText}</div>
           <div class="qr-page qr-page-text">${qrCodePageText}</div>
-          <div class="producer-icon">👤</div>
+          <div class="producer-icon">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="16" r="8" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M12 50c0-6.627 5.373-12 12-12h8c6.627 0 12 5.373 12 12" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="20" y="30" width="16" height="12" rx="2" stroke="#1f2937" stroke-width="2.5" fill="none"/>
+              <path d="M24 30V26c0-1.105.895-2 2-2h4c1.105 0 2 .895 2 2v4" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <line x1="26" y1="36" x2="30" y2="36" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="producer-label">Producer</div>
         </div>
       </div>
@@ -331,10 +372,21 @@ function generatePage2(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical page2-title">Insurance Application</div>
         <div class="qr-container qr-page2">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page2">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page2">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page2">👤</div>
+          <div class="applicant-icon applicant-icon-page2">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <defs>
+                <linearGradient id="personGradPage2" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#1f2937"/>
+                  <stop offset="100%" stop-color="#374151"/>
+                </linearGradient>
+              </defs>
+              <circle cx="28" cy="18" r="9" stroke="url(#personGradPage2)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="url(#personGradPage2)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page2">Applicant</div>
         </div>
       </div>
@@ -405,13 +457,16 @@ function generatePage2(data: ApplicationPacketData): string {
           </table>
         </div>
         
+        <div class="section-divider-page2"></div>
+        
         <div class="class-code-gross-section-page2">
           <div class="class-code-column-page2">
-            <div class="section-title-page2"><strong>CLASS CODE</strong></div>
+            <div class="class-code-title-page2"><strong>CLASS CODE</strong></div>
             <div class="class-code-value-page2">${data.classCode}</div>
           </div>
+          <div class="class-code-divider-page2"></div>
           <div class="gross-receipts-column-page2">
-            <div class="section-title-page2"><strong>GROSS RECEIPTS</strong></div>
+            <div class="gross-receipts-title-page2"><strong>GROSS RECEIPTS</strong></div>
             <div class="gross-receipts-value-page2">${data.grossReceipts}</div>
           </div>
         </div>
@@ -439,10 +494,15 @@ function generatePage3(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical page3-title">Insurance Application</div>
         <div class="qr-container qr-page3">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page3">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page3">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page3">👤</div>
+          <div class="applicant-icon applicant-icon-page3">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page3">Applicant</div>
         </div>
       </div>
@@ -536,10 +596,15 @@ function generatePage4(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical page4-title">Insurance Application</div>
         <div class="qr-container qr-page4">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page4">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page4">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page4">👤</div>
+          <div class="applicant-icon applicant-icon-page4">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page4">Applicant</div>
         </div>
       </div>
@@ -633,10 +698,15 @@ function generatePage5(data: ApplicationPacketData): string {
         </div>
         <div class="sidebar-title-vertical page5-title">Insurance Application</div>
         <div class="qr-container qr-page5">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page5">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page5">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page5">👤</div>
+          <div class="applicant-icon applicant-icon-page5">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page5">Applicant</div>
         </div>
       </div>
@@ -737,12 +807,22 @@ function generatePage6(data: ApplicationPacketData): string {
   return `
     <div class="page page6-isc" style="page-break-after: always;">
       <div class="sidebar sidebar-page6">
+        <div class="logo-container logo-page6">
+          <div class="logo logo-capital-co-hands-page6">
+            ${generateCapitalCoLogoHTML(data.capitalCoLogoSVG)}
+          </div>
+        </div>
         <div class="sidebar-title-vertical page6-title">Insurance Application</div>
         <div class="qr-container qr-page6">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page6">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page6">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page6">👤</div>
+          <div class="applicant-icon applicant-icon-page6">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page6">Applicant</div>
         </div>
       </div>
@@ -791,12 +871,22 @@ function generatePage7(data: ApplicationPacketData): string {
   return `
     <div class="page page7-isc" style="page-break-after: always;">
       <div class="sidebar sidebar-page7">
+        <div class="logo-container logo-page7">
+          <div class="logo logo-capital-co-hands-page7">
+            ${generateCapitalCoLogoHTML(data.capitalCoLogoSVG)}
+          </div>
+        </div>
         <div class="sidebar-title-vertical page7-title">Insurance Application</div>
         <div class="qr-container qr-page7">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page7">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page7">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page7">👤</div>
+          <div class="applicant-icon applicant-icon-page7">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page7">Applicant</div>
         </div>
       </div>
@@ -890,12 +980,22 @@ function generatePage8(data: ApplicationPacketData): string {
   return `
     <div class="page page8-isc" style="page-break-after: always;">
       <div class="sidebar sidebar-page8">
+        <div class="logo-container logo-page8">
+          <div class="logo logo-capital-co-hands-page8">
+            ${generateCapitalCoLogoHTML(data.capitalCoLogoSVG)}
+          </div>
+        </div>
         <div class="sidebar-title-vertical page8-title">Acknowledgment</div>
         <div class="qr-container qr-page8">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page8">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page8">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page8">👤</div>
+          <div class="applicant-icon applicant-icon-page8">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page8">Applicant</div>
         </div>
       </div>
@@ -976,12 +1076,22 @@ function generatePage9(data: ApplicationPacketData): string {
   return `
     <div class="page page9-isc" style="page-break-after: always;">
       <div class="sidebar sidebar-page9">
+        <div class="logo-container logo-page9">
+          <div class="logo logo-capital-co-hands-page9">
+            ${generateCapitalCoLogoHTML(data.capitalCoLogoSVG)}
+          </div>
+        </div>
         <div class="sidebar-title-vertical page9-title">Acknowledgment</div>
         <div class="qr-container qr-page9">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page9">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page9">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page9">👤</div>
+          <div class="applicant-icon applicant-icon-page9">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page9">Applicant</div>
         </div>
       </div>
@@ -1044,19 +1154,6 @@ function generatePage10(data: ApplicationPacketData): string {
   
   return `
     <div class="page page10-isc" style="page-break-after: always;">
-      <div class="sidebar sidebar-page10">
-        <div class="logo-container logo-page10">
-          <div class="logo logo-isc-blue">C&C</div>
-        </div>
-        <div class="sidebar-title-vertical page10-title">Insurance Application</div>
-        <div class="qr-container qr-page10">
-          ${generateQRCodeHTML(qrCodeText, 70)}
-          <div class="qr-text qr-text-page10">${qrCodeText}</div>
-          <div class="qr-page qr-page-text-page10">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page10">👤</div>
-          <div class="applicant-label applicant-label-page10">Producer</div>
-        </div>
-      </div>
       <div class="main-content main-content-page10">
         <div class="section-title-bold-page10">SURPLUS LINES COMPLIANCE CERTIFICATION</div>
         
@@ -1106,21 +1203,27 @@ function generatePage11(data: ApplicationPacketData): string {
     <div class="page page11-isc" style="page-break-after: always;">
       <div class="sidebar sidebar-page11">
         <div class="logo-container logo-page11">
-          <div class="logo logo-isc-blue">C&C</div>
+          <div class="logo logo-capital-co-hands-page11">
+            ${generateCapitalCoLogoHTML(data.capitalCoLogoSVG)}
+          </div>
         </div>
         <div class="sidebar-title-vertical page11-title">Loss Warranty Letter</div>
         <div class="qr-container qr-page11">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page11">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page11">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page11">👤</div>
+          <div class="applicant-icon applicant-icon-page11">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="18" r="9" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M10 52c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page11">Applicant</div>
         </div>
       </div>
       <div class="main-content main-content-page11">
         <div class="header-section-page11">
           <div class="header-left-page11">
-            <div class="logo-small-page11">C&C</div>
             <div class="applicant-info-page11">
               <div class="applicant-name-large-page11">${data.companyName}</div>
               <div class="applicant-address-page11">${data.applicantAddress}</div>
@@ -1131,9 +1234,9 @@ function generatePage11(data: ApplicationPacketData): string {
             </div>
           </div>
           <div class="header-right-page11">
-            <div class="logo-small-page11">C&C</div>
-            <div class="brand-name-page11">Capital & Co</div>
-            <div class="brand-subtitle-page11">Insurance Services</div>
+            <div class="logo-capital-co-page11-right">
+              ${generateCapitalCoLogoHTML(data.capitalCoLogoSVG, '100%', 'capital-co-logo-page11-right')}
+            </div>
           </div>
         </div>
         
@@ -1193,14 +1296,39 @@ function generatePage12(data: ApplicationPacketData): string {
     <div class="page page12-isc" style="page-break-after: always;">
       <div class="sidebar sidebar-page12">
         <div class="logo-container logo-page12">
-          <div class="logo logo-isc-blue">C&C</div>
+          <div class="logo logo-sterling-page12">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+              <defs>
+                <linearGradient id="sterlingGradient1Page12" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#00BCD4" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#0097A7" stop-opacity="0.95" />
+                </linearGradient>
+                <linearGradient id="sterlingGradient2Page12" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25" />
+                  <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.1" />
+                </linearGradient>
+              </defs>
+              <path d="M50 10 L80 25 L80 55 Q80 75 50 90 Q20 75 20 55 L20 25 Z" fill="url(#sterlingGradient1Page12)" />
+              <path d="M50 25 L65 40 L50 70 L35 40 Z" fill="url(#sterlingGradient2Page12)" />
+              <path d="M50 30 L50 65" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+              <path d="M40 47 L60 47" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity="0.8" />
+            </svg>
+          </div>
         </div>
         <div class="sidebar-title-vertical page12-title">Invoice Statement</div>
         <div class="qr-container qr-page12">
-          ${generateQRCodeHTML(qrCodeText, 70)}
+          ${data.qrCodeDataUrl ? generateQRCodeHTML(data.qrCodeDataUrl) : `<div class="qr-code-text-only">${qrCodeText}</div>`}
           <div class="qr-text qr-text-page12">${qrCodeText}</div>
           <div class="qr-page qr-page-text-page12">${qrCodePageText}</div>
-          <div class="applicant-icon applicant-icon-page12">👤</div>
+          <div class="applicant-icon applicant-icon-page12">
+            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 0.48in; height: 0.48in;">
+              <circle cx="28" cy="16" r="8" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M12 50c0-6.627 5.373-12 12-12h8c6.627 0 12 5.373 12 12" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="20" y="30" width="16" height="12" rx="2" stroke="#1f2937" stroke-width="2.5" fill="none"/>
+              <path d="M24 30V26c0-1.105.895-2 2-2h4c1.105 0 2 .895 2 2v4" stroke="#1f2937" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <line x1="26" y1="36" x2="30" y2="36" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="applicant-label applicant-label-page12">Producer</div>
         </div>
       </div>
@@ -1605,21 +1733,35 @@ function minifyHTML(html: string): string {
 /**
  * Generate the complete 12-page application packet HTML
  */
-export function generateApplicationPacketHTML(data: ApplicationPacketData): string {
+export async function generateApplicationPacketHTML(data: ApplicationPacketData): Promise<string> {
+  // Generate QR codes for all pages upfront (base64 data URLs, no external API calls)
+  const qrCodeText = data.applicationId;
+  let qrCodeDataUrl: string;
+  
+  try {
+    qrCodeDataUrl = await generateQRCodeBase64(qrCodeText, 200);
+  } catch (error) {
+    console.error('[Application Packet] Error generating QR code, using placeholder:', error);
+    qrCodeDataUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5RUiBDb2RlPC90ZXh0Pjwvc3ZnPg==';
+  }
+  
+  // Add QR code data URL to data object for page generation
+  const dataWithQR = { ...data, qrCodeDataUrl };
+  
   // Generate all pages first
   const pages = [
-    generatePage1(data),
-    generatePage2(data),
-    generatePage3(data),
-    generatePage4(data),
-    generatePage5(data),
-    generatePage6(data),
-    generatePage7(data),
-    generatePage8(data),
-    generatePage9(data),
-    generatePage10(data),
-    generatePage11(data),
-    generatePage12(data)
+    generatePage1(dataWithQR),
+    generatePage2(dataWithQR),
+    generatePage3(dataWithQR),
+    generatePage4(dataWithQR),
+    generatePage5(dataWithQR),
+    generatePage6(dataWithQR),
+    generatePage7(dataWithQR),
+    generatePage8(dataWithQR),
+    generatePage9(dataWithQR),
+    generatePage10(dataWithQR),
+    generatePage11(dataWithQR),
+    generatePage12(dataWithQR)
   ].join('');
   
   const cssContent = `
@@ -2106,14 +2248,24 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page1-specific .producer-icon {
-      font-size: 18pt;
-      margin-top: 0.1in;
-      color: #374151;
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      width: auto;
-      height: auto;
+      width: 0.55in;
+      height: 0.55in;
+      margin-top: 0.12in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+      padding: 0.08in;
+    }
+    
+    .page1-specific .producer-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08));
     }
     
     .page1-specific .producer-label {
@@ -2265,10 +2417,30 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       margin-bottom: 0.3in;
       position: relative;
       bottom: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    .page2-isc .qr-container.qr-page2 .qr-code {
+      display: block;
+      visibility: visible;
+      opacity: 1;
+      margin-bottom: 0.05in;
+    }
+    
+    .page2-isc .qr-container.qr-page2 .qr-code img {
+      display: block;
+      visibility: visible;
+      opacity: 1;
+      width: 0.7in !important;
+      height: 0.7in !important;
     }
     
     .page2-isc .page2-title {
-      font-size: 22pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
       letter-spacing: 2px;
@@ -2299,12 +2471,45 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .applicant-icon-page2 {
-      font-size: 16pt;
-      margin-top: 0.1in;
-      color: #374151;
-      background: transparent;
-      border: none;
-      box-shadow: none;
+      width: 0.55in;
+      height: 0.55in;
+      margin-top: 0.12in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+      padding: 0.08in;
+    }
+    
+    .page2-isc .applicant-icon-page2 svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08));
+    }
+    
+    /* General applicant icon styling for all pages */
+    .applicant-icon {
+      width: 0.55in;
+      height: 0.55in;
+      margin-top: 0.12in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+      padding: 0.08in;
+    }
+    
+    .applicant-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08));
     }
     
     .page2-isc .applicant-label-page2 {
@@ -2319,21 +2524,22 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .main-content-page2 {
-      padding: 0.3in 0.4in;
+      padding: 0.25in 0.4in 0.2in 0.4in;
       font-size: 11pt;
       line-height: 1.3;
-      max-height: 10.2in;
-      overflow: hidden;
+      max-height: 11in;
+      overflow: visible;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
     
     .page2-isc .header-top-page2 {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 0.12in;
-      padding-bottom: 0.08in;
+      margin-bottom: 0.06in;
+      padding-bottom: 0.03in;
       flex-shrink: 0;
     }
     
@@ -2354,8 +2560,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .logo-icon-page2-hands {
-      width: 2.5in;
-      height: 2.5in;
+      width: 1.8in;
+      height: 1.8in;
       background: transparent;
       border-radius: 0;
       display: flex;
@@ -2381,7 +2587,7 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     
     .page2-isc .agency-name-page2 {
       font-weight: 600;
-      margin-bottom: 0.03in;
+      margin-bottom: 0.02in;
     }
     
     .page2-isc .agency-contact-page2,
@@ -2389,7 +2595,8 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     .page2-isc .agency-city-state-zip-page2,
     .page2-isc .agency-phone-page2,
     .page2-isc .agency-email-page2 {
-      margin-bottom: 0.02in;
+      margin-bottom: 0.015in;
+      font-size: 9.5pt;
     }
     
     .page2-isc .agency-info-page2-left .agency-name-page2,
@@ -2398,15 +2605,15 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     .page2-isc .agency-info-page2-left .agency-city-state-zip-page2,
     .page2-isc .agency-info-page2-left .agency-phone-page2,
     .page2-isc .agency-info-page2-left .agency-email-page2 {
-      margin-bottom: 0.02in;
+      margin-bottom: 0.015in;
     }
     
     .page2-isc .app-id-quote-parallel-page2 {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 0.12in;
-      gap: 0.25in;
+      margin-bottom: 0.05in;
+      gap: 0.2in;
       flex-shrink: 0;
     }
     
@@ -2420,43 +2627,43 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .application-id-large-page2 {
-      font-size: 11pt;
+      font-size: 10.5pt;
       font-weight: 600;
-      margin-bottom: 0.08in;
+      margin-bottom: 0.05in;
       color: #1f2937;
-      line-height: 1.3;
+      line-height: 1.25;
     }
     
     .page2-isc .date-section-page2 {
-      font-size: 11pt;
+      font-size: 10.5pt;
       color: #1f2937;
-      line-height: 1.3;
+      line-height: 1.25;
     }
     
     .page2-isc .insured-info-section-page2 {
-      margin-bottom: 0.12in;
-      padding-bottom: 0.08in;
+      margin-bottom: 0.04in;
+      padding-bottom: 0.02in;
       flex-shrink: 0;
     }
     
     .page2-isc .section-title-page2 {
-      font-size: var(--font-size-xl); /* 22-24px ≈ 16.5-18pt */
-      font-weight: 600; /* Inter SemiBold */
-      margin-bottom: 0.06in;
+      font-size: 11pt;
+      font-weight: 600;
+      margin-bottom: 0.04in;
       color: #1f2937;
-      line-height: 1.3;
+      line-height: 1.2;
     }
     
     .page2-isc .insured-detail-page2 {
-      font-size: 10pt;
-      line-height: 1.25;
-      margin-bottom: 0.015in;
+      font-size: 9.5pt;
+      line-height: 1.2;
+      margin-bottom: 0.01in;
       color: #1f2937;
     }
     
     .page2-isc .quote-detail-page2 {
-      font-size: 10pt;
-      line-height: 1.3;
+      font-size: 9.5pt;
+      line-height: 1.2;
       margin-bottom: 0.03in;
       color: #1f2937;
       text-align: right;
@@ -2467,20 +2674,20 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .applicant-info-section-page2 {
-      margin-bottom: 0.12in;
+      margin-bottom: 0.05in;
       flex-shrink: 0;
     }
     
     .page2-isc .section-title-underline-page2 {
-      font-size: 11pt;
+      font-size: 10.5pt;
       font-weight: 800;
       text-transform: uppercase;
-      margin-bottom: 0.08in;
-      padding-bottom: 0.03in;
+      margin-bottom: 0.04in;
+      padding-bottom: 0.02in;
       border-bottom: 2px solid #0f172a;
       color: #0f172a;
       letter-spacing: 0.8px;
-      line-height: 1.3;
+      line-height: 1.2;
       position: relative;
     }
     
@@ -2495,30 +2702,50 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .applicant-field-page2 {
-      font-size: 10pt;
-      line-height: 1.3;
-      margin-bottom: 0.05in;
+      font-size: 9.5pt;
+      line-height: 1.15;
+      margin-bottom: 0.02in;
       color: #1f2937;
     }
     
     .page2-isc .coverages-section-page2 {
-      margin-bottom: 0.12in;
+      margin-bottom: 0.04in;
       flex-shrink: 0;
+    }
+    
+    .page2-isc .section-divider-page2 {
+      width: 100%;
+      height: 2px;
+      background: #0f172a;
+      margin-bottom: 0.06in;
+      margin-top: 0.03in;
+      flex-shrink: 0;
+      position: relative;
+    }
+    
+    .page2-isc .section-divider-page2::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 0.3in;
+      height: 2px;
+      background: #4A9EFF;
     }
     
     .page2-isc .coverages-table-page2 {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10pt;
-      margin-top: 0.06in;
+      font-size: 9.5pt;
+      margin-top: 0.03in;
     }
     
     .page2-isc .coverages-table-page2 td {
-      padding: 0.04in 0.06in;
+      padding: 0.025in 0.04in;
       border-bottom: 1px solid #e5e7eb;
       color: #1f2937;
       vertical-align: top;
-      line-height: 1.3;
+      line-height: 1.2;
     }
     
     .page2-isc .coverages-table-page2 td:first-child {
@@ -2531,30 +2758,77 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page2-isc .class-code-gross-section-page2 {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 0;
-      gap: 0.25in;
-      margin-top: 0.08in;
+      display: flex !important;
+      justify-content: flex-start;
+      align-items: flex-start;
+      margin-bottom: 0.1in;
+      margin-top: 0;
+      gap: 0;
       flex-shrink: 0;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative;
+      z-index: 10;
+      width: 100% !important;
+      min-height: 1in;
+      padding: 0.05in 0;
+      clear: both;
+      page-break-inside: avoid;
     }
     
     .page2-isc .class-code-column-page2,
     .page2-isc .gross-receipts-column-page2 {
       flex: 1;
+      visibility: visible;
+      opacity: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .page2-isc .class-code-title-page2,
+    .page2-isc .gross-receipts-title-page2 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.05in;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+    
+    .page2-isc .class-code-divider-page2 {
+      width: 1px;
+      height: 1.1in;
+      background: #1f2937;
+      flex-shrink: 0;
+      margin: 0 0.2in;
+      align-self: flex-start;
+      margin-top: 0.2in;
     }
     
     .page2-isc .class-code-value-page2,
     .page2-isc .gross-receipts-value-page2 {
       font-size: 11pt;
-      font-weight: 600;
-      margin-top: 0.05in;
+      font-weight: 500;
+      margin-top: 0;
       color: #1f2937;
-      padding: 0.05in;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
+      padding: 0.1in 0.12in;
+      background: #f5f5f5;
+      border: 1px solid #d1d5db;
       border-radius: 4px;
       line-height: 1.3;
+      min-height: 0.45in;
+      display: flex !important;
+      align-items: center;
+      visibility: visible !important;
+      opacity: 1 !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      text-align: left;
+    }
+      display: flex;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      text-align: left;
     }
     
     .page2-isc .page-number-page2 {
@@ -2611,11 +2885,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page3-isc .page3-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page3-isc .main-content-page3 {
@@ -2743,29 +3024,31 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     .page3-isc .yes-no-options-page3 .yes-option,
     .page3-isc .yes-no-options-page3 .no-option {
       padding: 0.08in 0.2in;
-      border: 2px solid #e5e7eb;
-      border-radius: 6px;
-      background: #ffffff;
+      border: none;
+      border-radius: 0;
+      background: transparent;
       min-width: 0.8in;
       text-align: center;
-      transition: all 0.2s;
       font-weight: 500;
+      color: #1f2937;
     }
     
     .page3-isc .yes-no-options-page3 .yes-option.selected {
-      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-      border-color: #3b82f6;
-      color: #1e40af;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+      background: transparent;
+      border: none;
+      color: #1f2937;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
     
     .page3-isc .yes-no-options-page3 .no-option.selected {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-      border-color: #ef4444;
-      color: #991b1b;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+      background: transparent;
+      border: none;
+      color: #1f2937;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
     
     .page3-isc .explanation-field-page3 {
@@ -2790,26 +3073,49 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
        ============================================ */
     .page4-isc .sidebar-page4 {
       background: #e5e7eb;
-      width: 1.2in;
+      width: 1.8in;
       padding: 0.35in 0.2in;
       border-right: 1px solid #d1d5db;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
     
-    .page4-isc .logo-isc-blue {
-      width: 0.55in;
-      height: 0.55in;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-      border-radius: 8px;
-      font-size: 16pt;
+    .page4-isc .logo-capital-co-hands-page4 {
+      width: 1.8in;
+      height: 1.8in;
+      background: transparent;
+      border-radius: 0;
       margin-bottom: 0.25in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    
+    .page4-isc .logo-capital-co-hands-page4 svg,
+    .page4-isc .logo-capital-co-hands-page4 img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain;
     }
     
     .page4-isc .page4-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page4-isc .main-content-page4 {
@@ -2877,29 +3183,31 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     .page4-isc .yes-no-options-page4 .yes-option,
     .page4-isc .yes-no-options-page4 .no-option {
       padding: 0.08in 0.2in;
-      border: 2px solid #e5e7eb;
-      border-radius: 6px;
-      background: #ffffff;
+      border: none;
+      border-radius: 0;
+      background: transparent;
       min-width: 0.8in;
       text-align: center;
-      transition: all 0.2s;
       font-weight: 500;
+      color: #1f2937;
     }
     
     .page4-isc .yes-no-options-page4 .yes-option.selected {
-      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-      border-color: #3b82f6;
-      color: #1e40af;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+      background: transparent;
+      border: none;
+      color: #1f2937;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
     
     .page4-isc .yes-no-options-page4 .no-option.selected {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-      border-color: #ef4444;
-      color: #991b1b;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+      background: transparent;
+      border: none;
+      color: #1f2937;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
     
     .page4-isc .explanation-field-page4 {
@@ -2971,11 +3279,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page5-isc .page5-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page5-isc .main-content-page5 {
@@ -3043,29 +3358,31 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     .page5-isc .yes-no-options-page5 .yes-option,
     .page5-isc .yes-no-options-page5 .no-option {
       padding: 0.08in 0.2in;
-      border: 2px solid #e5e7eb;
-      border-radius: 6px;
-      background: #ffffff;
+      border: none;
+      border-radius: 0;
+      background: transparent;
       min-width: 0.8in;
       text-align: center;
-      transition: all 0.2s;
       font-weight: 500;
+      color: #1f2937;
     }
     
     .page5-isc .yes-no-options-page5 .yes-option.selected {
-      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-      border-color: #3b82f6;
-      color: #1e40af;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+      background: transparent;
+      border: none;
+      color: #1f2937;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
     
     .page5-isc .yes-no-options-page5 .no-option.selected {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-      border-color: #ef4444;
-      color: #991b1b;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+      background: transparent;
+      border: none;
+      color: #1f2937;
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
     }
     
     .page5-isc .sub-question-header-page5 {
@@ -3156,11 +3473,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page6-isc .page6-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page6-isc .main-content-page6 {
@@ -3281,11 +3605,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page7-isc .page7-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page7-isc .main-content-page7 {
@@ -3420,11 +3751,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page8-isc .page8-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page8-isc .main-content-page8 {
@@ -3593,11 +3931,18 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     }
     
     .page9-isc .page9-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page9-isc .main-content-page9 {
@@ -3712,38 +4057,16 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
     /* ============================================
        PAGE 10 - ISC FORMAT: SURPLUS LINES COMPLIANCE CERTIFICATION
        ============================================ */
-    .page10-isc .sidebar-page10 {
-      background: #e5e7eb;
-      width: 1.2in;
-      padding: 0.35in 0.2in;
-      border-right: 1px solid #d1d5db;
-    }
-    
-    .page10-isc .logo-isc-blue {
-      width: 0.55in;
-      height: 0.55in;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-      border-radius: 8px;
-      font-size: 16pt;
-      margin-bottom: 0.25in;
-    }
-    
-    .page10-isc .page10-title {
-      font-size: 18pt;
-      font-weight: 600;
-      color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
-    }
-    
     .page10-isc .main-content-page10 {
-      padding: 0.25in 0.35in;
+      padding: 0.5in 0.75in;
       font-size: 10pt;
       line-height: 1.3;
-      max-height: 10.5in;
+      max-height: 11in;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      width: 100%;
+      max-width: 100%;
     }
     
     .page10-isc .section-title-bold-page10 {
@@ -3803,26 +4126,49 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
        ============================================ */
     .page11-isc .sidebar-page11 {
       background: #e5e7eb;
-      width: 1.2in;
+      width: 1.8in;
       padding: 0.35in 0.2in;
       border-right: 1px solid #d1d5db;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
     
-    .page11-isc .logo-isc-blue {
-      width: 0.55in;
-      height: 0.55in;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-      border-radius: 8px;
-      font-size: 16pt;
+    .page11-isc .logo-capital-co-hands-page11 {
+      width: 1.8in;
+      height: 1.8in;
+      background: transparent;
+      border-radius: 0;
       margin-bottom: 0.25in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    
+    .page11-isc .logo-capital-co-hands-page11 svg,
+    .page11-isc .logo-capital-co-hands-page11 img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain;
     }
     
     .page11-isc .page11-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page11-isc .main-content-page11 {
@@ -3847,18 +4193,31 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       flex: 1;
     }
     
-    .page11-isc .logo-small-page11 {
-      width: 0.5in;
-      height: 0.5in;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-      color: #fff;
-      border-radius: 8px;
-      display: inline-flex;
+    .page11-isc .header-right-page11 {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+    }
+    
+    .page11-isc .logo-capital-co-page11-right {
+      width: 1.5in;
+      height: 1.5in;
+      background: transparent;
+      border-radius: 0;
+      display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 16pt;
+      box-shadow: none;
+      flex-shrink: 0;
+      padding: 0;
       margin-bottom: 0.1in;
+    }
+    
+    .page11-isc .logo-capital-co-page11-right svg,
+    .page11-isc .logo-capital-co-page11-right img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain;
     }
     
     .page11-isc .applicant-name-large-page11 {
@@ -3879,21 +4238,6 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
       color: #1f2937;
     }
     
-    .page11-isc .brand-name-page11 {
-      font-size: 14pt;
-      font-weight: 700;
-      margin-bottom: 0.03in;
-      color: #1f2937;
-    }
-    
-    .page11-isc .brand-subtitle-page11 {
-      font-size: 9pt;
-      color: #6b7280;
-      border-top: 1px solid #d1d5db;
-      border-bottom: 1px solid #d1d5db;
-      padding: 0.02in 0;
-      margin-top: 0.02in;
-    }
     
     .page11-isc .warranty-content-page11 p {
       font-size: 10pt;
@@ -3982,26 +4326,47 @@ export function generateApplicationPacketHTML(data: ApplicationPacketData): stri
        ============================================ */
     .page12-isc .sidebar-page12 {
       background: #e5e7eb;
-      width: 1.2in;
+      width: 1.8in;
       padding: 0.35in 0.2in;
       border-right: 1px solid #d1d5db;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
     
-    .page12-isc .logo-isc-blue {
-      width: 0.55in;
-      height: 0.55in;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    .page12-isc .logo-sterling-page12 {
+      width: 0.6in;
+      height: 0.6in;
+      background: linear-gradient(135deg, #1A1F2E 0%, #2A3240 50%, #1A1F2E 100%);
       border-radius: 8px;
-      font-size: 16pt;
+      border: 1px solid rgba(0, 188, 212, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
       margin-bottom: 0.25in;
     }
     
+    .page12-isc .logo-sterling-page12 svg {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
     .page12-isc .page12-title {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 600;
       color: #374151;
-      letter-spacing: 1.5px;
-      margin: 0.4in 0;
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(180deg);
+      margin: 0;
     }
     
     .page12-isc .main-content-page12 {

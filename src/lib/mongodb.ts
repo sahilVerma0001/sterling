@@ -1,3 +1,9 @@
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// 🔑 Load env BEFORE anything else (for scripts like seed)
+config({ path: resolve(process.cwd(), ".env.local") });
+
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -12,6 +18,7 @@ interface MongooseCache {
 }
 
 declare global {
+  // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
 }
 
@@ -31,9 +38,7 @@ async function connectDB(): Promise<typeof mongoose> {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {
@@ -47,16 +52,3 @@ async function connectDB(): Promise<typeof mongoose> {
 }
 
 export default connectDB;
-
-
-
-
-
-
-
-
-
-
-
-
-
